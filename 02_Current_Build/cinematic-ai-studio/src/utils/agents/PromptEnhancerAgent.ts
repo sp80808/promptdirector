@@ -11,8 +11,9 @@
  *            gentle shadows, shallow depth of field. @Sarah_MASTER"
  */
 
-import { Agent, AgentContext, AgentResult } from "./base";
-import { GoogleGenAI } from "@google/genai";
+import { Agent, AgentContext, AgentResult } from './base';
+import { GoogleGenAI } from '@google/genai';
+import type { Shot } from '@/types';
 
 export class PromptEnhancerAgent extends Agent {
   private gemini: GoogleGenAI | null = null;

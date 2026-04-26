@@ -1,21 +1,15 @@
 /**
  * Agent Registry — Central manager for all automation agents
- * 
- * Usage:
- *   import { AgentRegistry } from './registry';
- *   AgentRegistry.register(new PromptEnhancerAgent());
- *   // Later, run all applicable agents:
- *   const results = await AgentRegistry.runAll(context);
  */
 
 import { Agent } from './base';
 import { AgentResult } from './base';
 import { PromptEnhancerAgent } from './PromptEnhancerAgent';
+import { TakeCuratorAgent } from './TakeCuratorAgent';
 
 const agents: Agent[] = [];
 
 export const AgentRegistry = {
-  /** Register an agent (call during app init) */
   register(agent: Agent) {
     if (agents.some(a => a.id === agent.id)) {
       console.warn(`[AgentRegistry] Agent "${agent.id}" already registered, skipping`);
@@ -25,30 +19,22 @@ export const AgentRegistry = {
     console.log(`[AgentRegistry] ✓ Registered agent: "${agent.name}" (${agent.id})`);
   },
 
-  /** Register multiple agents at once */
   registerAll(...newAgents: Agent[]) {
     newAgents.forEach(a => this.register(a));
   },
 
-  /** Get all registered agents */
   getAll(): Agent[] {
     return [...agents];
   },
 
-  /** Get agent by ID */
   get<T extends Agent>(id: string): T | undefined {
     return agents.find(a => a.id === id) as T | undefined;
   },
 
-  /** Clear all agents (mainly for testing) */
   clear() {
     agents.length = 0;
   },
 
-  /**
-   * Execute all applicable agents for the given context
-   * Returns aggregated results
-   */
   async runAll(context: import('./base').AgentContext): Promise<AgentResult[]> {
     const results: AgentResult[] = [];
     
@@ -58,7 +44,6 @@ export const AgentRegistry = {
 
       try {
         const agentResults = await agent.process(context);
-        // Tag each result with the agent that produced it
         const tagged = agentResults.map(r => ({ ...r, agentId: agent.id }));
         results.push(...tagged);
       } catch (err) {
@@ -69,29 +54,25 @@ export const AgentRegistry = {
     return results;
   },
 
-  /** Get count of registered agents */
   get count() {
     return agents.length;
   }
 };
 
-/** Initialize default agents (call once on app start) */
 export function initializeDefaultAgents() {
   AgentRegistry.clear();
   
-  // Import agents
-  const { PromptEnhancerAgent } = require('./PromptEnhancerAgent');
-  const { TakeCuratorAgent } = require('./TakeCuratorAgent');
-  
+  // Register agents in priority order
   AgentRegistry.register(new PromptEnhancerAgent());
   AgentRegistry.register(new TakeCuratorAgent());
   
-  // Future agents will be registered here:
+  // Future agents:
   // AgentRegistry.register(new ShotSuggestionAgent());
   // AgentRegistry.register(new ContinuityAgent());
   
   console.log(`[AgentRegistry] Initialized ${AgentRegistry.count} agent(s)`);
 }
+
 
     agents.push(agent);
     console.log(`[AgentRegistry] ✓ Registered agent: "${agent.name}" (${agent.id})`);

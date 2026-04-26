@@ -1,4 +1,5 @@
 import { Character, Location, Shot } from "../types";
+import { FrameChainingEngine } from "./frameChaining";
 
 /**
  * eCoT: Prompt Orchestration Engine
@@ -32,4 +33,46 @@ export function buildCinematicPrompt(shot: Shot, character: Character | undefine
   ].join("\n");
 
   return prompt;
+}
+
+export interface GenerationPayload {
+  prompt: string;
+  negativePrompt: string;
+  model: string;
+  aspectRatio: string;
+  cfgScale: number;
+  steps: number;
+  initImageUrl?: string;
+  initImageStrength?: number;
+  seed?: number;
+}
+
+export function buildFullGenerationPayload(
+  shot: Shot,
+  characters: Character[],
+  locations: Location[],
+  sceneShotOrder: string[],
+  shots: Record<string, Shot>
+): GenerationPayload {
+  const primaryCharacter = shot.characterIds.length > 0 
+    ? characters.find(c => c.id === shot.characterIds[0])
+    : undefined;
+  
+  const location = shot.locationId 
+    ? locations.find(l => l.id === shot.locationId)
+    : undefined;
+
+  const basePrompt = buildCinematicPrompt(shot, primaryCharacter, location);
+  const chainInfo = FrameChainingEngine.prepareGenerationPayload(shot, shots, sceneShotOrder);
+
+  return {
+    prompt: basePrompt,
+    negativePrompt: shot.settings.negativePrompt,
+    model: shot.settings.model,
+    aspectRatio: shot.settings.aspectRatio,
+    cfgScale: shot.settings.cfgScale,
+    steps: shot.settings.steps,
+    initImageUrl: chainInfo.initImageUrl,
+    initImageStrength: chainInfo.isChained ? chainInfo.chainStrength : undefined
+  };
 }

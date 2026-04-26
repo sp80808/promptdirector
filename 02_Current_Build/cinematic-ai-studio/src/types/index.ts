@@ -53,9 +53,6 @@ export type Take = {
   id: string;
   shotId: string;
   videoUrl?: string;
-  audioUrl?: string;      // Foley/Ambient
-  speechUrl?: string;     // TTS dialogue
-  lipSyncUrl?: string;    // Result of audio + visuals
   thumbUrl?: string;
   fullImageUrl?: string;
   seed: number;
@@ -63,13 +60,6 @@ export type Take = {
   rating: number;
   createdAt: number;
   duration?: number;
-  vlmAnalysis?: {
-    description: string;
-    consistencyScore: number; // 0-100
-    qualityRating: number;    // 1-5
-    tags: string[];
-    feedback: string;
-  };
   metadata?: {
     model: string;
     prompt: string;
@@ -78,6 +68,9 @@ export type Take = {
     steps: number;
     aspectRatio: string;
     initImageUrl?: string;
+    qualityScore?: number;     // 0-10 from TakeCuratorAgent
+    speechUrl?: string;        // Generated voice audio
+    lipSyncUrl?: string;       // Lip-synced video
   };
 };
 
@@ -101,6 +94,29 @@ export type ContinuityIssue = {
   type: "character" | "location" | "lighting" | "prop" | "timing" | "wardrobe";
   message: string;
   suggestion?: string;
+};
+
+// ── Automation / Agent System ──────────────────────────────────────────────
+export type AutomationSuggestion = {
+  id: string;
+  agentId: string;
+  shotId: string;        // target shot
+  type: "prompt_enhancement" | "shot_suggestion" | "continuity_fix" | "take_approval" | "take_rating";
+  original: string;      // original value (prompt text, or shot config)
+  suggested: string;     // suggested new value
+  confidence: number;    // 0-1
+  reason: string;        // why this suggestion was made
+  applied: boolean;
+  dismissed: boolean;
+  createdAt: number;
+};
+
+export type AutomationConfig = {
+  promptEnhancer: { enabled: boolean; level: "light" | "moderate" | "aggressive" };
+  autoApproval: { enabled: boolean; minScore: number };
+  continuityCheck: { enabled: boolean; severityThreshold: "warning" | "error" };
+  shotSuggester: { enabled: boolean };
+  takeCurator: { enabled: boolean; minAutoScore: number };
 };
 
 export type TransitionType = "cut" | "fade" | "dissolve" | "wipe" | "match_cut" | "cut_on_action";
@@ -148,7 +164,7 @@ export type Scene = {
 
 export type Modal =
   | null
-  | { kind: "settings" }
+  | { kind: "settings" | "automation" }
   | { kind: "character"; id?: string }
   | { kind: "location"; id?: string }
   | { kind: "prop"; id?: string }
@@ -174,7 +190,18 @@ export interface CinematicState {
   selectedShotId: string | null;
   selectShot: (id: string | null) => void;
 
+  // ── Automation Layer ────────────────────────────────────────────────────
+  automationSuggestions: AutomationSuggestion[];
+  automationConfig: AutomationConfig;
+
   // Actions
+  addSuggestion: (s: Omit<AutomationSuggestion, "id" | "createdAt" | "applied" | "dismissed">) => string;
+  applySuggestion: (id: string) => void;
+  dismissSuggestion: (id: string) => void;
+  clearSuggestionsForShot: (shotId: string) => void;
+  updateAutomationConfig: (config: Partial<AutomationConfig>) => void;
+
+  // ── Original Actions ───────────────────────────────────────────────────
   addCharacter: (c: Omit<Character, "id">) => string;
   updateCharacter: (id: string, p: Partial<Character>) => void;
   addOutfit: (charId: string, o: Omit<Outfit, "id">) => void;

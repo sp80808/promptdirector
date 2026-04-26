@@ -29,7 +29,7 @@ import {
 
 export function Inspector() {
   const state = useStore();
-  const { shots, selectedShotId, characters, locations, updateShot, addShot, addTake, updateTake, approveTake, setModal, automationSuggestions, applySuggestion, dismissSuggestion } = state;
+  const { shots, selectedShotId, characters, locations, updateShot, addShot, addTake, updateTake, approveTake, setModal, automationSuggestions, applySuggestion, dismissSuggestion, clearSuggestionsForShot, automationConfig } = state;
   const shot = selectedShotId ? shots[selectedShotId] : null;
 
   const [isRendering, setIsRendering] = useState(false);
@@ -38,15 +38,41 @@ export function Inspector() {
   
   // Automation state
   const [isEnhancing, setIsEnhancing] = useState(false);
-  
-  // Automation states
-  const [isEnhancing, setIsEnhancing] = useState(false);
+  const enhanceTimeoutRef = React.useRef<number | null>(null);
   
   // Get relevant suggestions for current shot
   const suggestions = selectedShotId 
     ? automationSuggestions.filter(s => s.shotId === selectedShotId && !s.applied && !s.dismissed)
     : [];
   const promptSuggestion = suggestions.find(s => s.type === 'prompt_enhancement');
+
+  // Auto-run enhancer on prompt change (debounced)
+  const handlePromptChange = (value: string) => {
+    handleUpdate({ rawPrompt: value });
+    
+    // Clear stale suggestions immediately
+    if (selectedShotId) {
+      clearSuggestionsForShot(selectedShotId);
+    }
+    
+    // Schedule auto-enhance if enabled
+    if (!automationConfig.promptEnhancer?.enabled) return;
+    
+    if (enhanceTimeoutRef.current) {
+      clearTimeout(enhanceTimeoutRef.current);
+    }
+    
+    enhanceTimeoutRef.current = window.setTimeout(async () => {
+      if (selectedShotId && value.trim().length > 3) {
+        setIsEnhancing(true);
+        try {
+          await runAutomationForShot(selectedShotId);
+        } finally {
+          setIsEnhancing(false);
+        }
+      }
+    }, 1000); // 1s debounce
+  };
 
   // Subscribe to take status changes for the current shot
   React.useEffect(() => {
@@ -180,7 +206,7 @@ export function Inspector() {
           </div>
           <MentionTextarea 
             value={shot.rawPrompt}
-            onChange={(v) => handleUpdate({ rawPrompt: v })}
+            onChange={handlePromptChange}
             placeholder="Type @ to mention characters, outfits or locations..."
             rows={4}
           />
@@ -470,7 +496,14 @@ export function Inspector() {
           </div>
           
           <div className="grid grid-cols-2 gap-2">
-            {shot.takes.map(take => (
+            {shot.takes.map(take => {
+              // Determine quality-based styling if scored
+              const qualityScore = take.metadata?.qualityScore;
+              const isHighQuality = qualityScore !== undefined && qualityScore >= 8.5;
+              const isMediumQuality = qualityScore !== undefined && qualityScore >= 7.0 && qualityScore < 8.5;
+              const isLowQuality = qualityScore !== undefined && qualityScore < 7.0;
+              
+              return (
               <div 
                 key={take.id} 
                 onClick={() => {
@@ -478,7 +511,17 @@ export function Inspector() {
                     setModal({ kind: 'media_viewer', takeId: take.id, shotId: shot.id });
                   }
                 }}
-                className={`aspect-video bg-ink-950 border rounded overflow-hidden relative group cursor-pointer transition-all ${shot.approvedTakeId === take.id ? 'border-accent' : 'border-line hover:border-zinc-600'}`}
+                className={`aspect-video bg-ink-950 border rounded overflow-hidden relative group cursor-pointer transition-all ${
+                  shot.approvedTakeId === take.id 
+                    ? 'border-accent shadow-[0_0_8px_rgba(255,107,61,0.3)]' 
+                    : qualityScore !== undefined
+                      ? isHighQuality 
+                        ? 'border-lime-500/50 hover:border-lime-400'
+                        : isMediumQuality
+                          ? 'border-yellow-500/50 hover:border-yellow-400'
+                          : 'border-red-500/30 hover:border-red-400'
+                      : 'border-line hover:border-zinc-600'
+                }`}
               >
                 {take.videoUrl ? (
                   <>
@@ -497,6 +540,21 @@ export function Inspector() {
                      <span className="text-[8px] mono text-zinc-700 uppercase">{take.status}</span>
                   </div>
                 )}
+
+                {/* Quality score badge (top-left) */}
+                {qualityScore !== undefined && (
+                  <div className={`absolute top-1 left-1 text-[8px] mono font-bold px-1.5 py-0.5 rounded border ${
+                    isHighQuality 
+                      ? 'bg-lime-500/20 text-lime-500 border-lime-500/40'
+                      : isMediumQuality
+                        ? 'bg-yellow-500/20 text-yellow-500 border-yellow-500/40'
+                        : 'bg-red-500/20 text-red-500 border-red-500/40'
+                  }`}>
+                    Q: {qualityScore.toFixed(1)}
+                  </div>
+                )}
+
+                {/* Approved indicator (top-right) */}
                 {shot.approvedTakeId === take.id && (
                   <div className="absolute top-1 right-1 bg-accent text-black rounded-full p-0.5 z-10">
                     <CheckCircle2 size={10} />

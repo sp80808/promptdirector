@@ -9,6 +9,8 @@
  * All agents run in browser context, calling external LLM/vision APIs as needed.
  */
 
+import type { Shot, Character, Location, CinematicState, AutomationConfig } from '@/types';
+
 /** Minimalist event bus for decoupled communication */
 type EventHandler = (event: AutomationEvent) => Promise<void> | void;
 
@@ -39,12 +41,13 @@ export const EventBus = new EventBusImpl();
 /** Context passed to agents when they run */
 export interface AgentContext {
   shotId?: string;
-  shot?: import("../types").Shot;
-  characters: import("../types").Character[];
-  locations: import("../types").Location[];
+  shot?: Shot;
+  characters: Character[];
+  locations: Location[];
+  props: any[]; // keep flexible
   apiKey?: string;
   config: AutomationConfig;
-  store: import("../store").CinematicState; // read-only access
+  store: CinematicState; // read-only access (agents should not mutate directly)
 }
 
 /** Base class for all automation agents */

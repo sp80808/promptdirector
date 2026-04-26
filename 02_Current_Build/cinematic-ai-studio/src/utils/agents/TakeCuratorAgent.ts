@@ -14,8 +14,7 @@
 
 import { Agent, AgentContext, AgentResult } from './base';
 import { GoogleGenAI } from '@google/genai';
-
-export type QualityMetrics = {
+import type { Take, Shot } from '@/types';
   composition: number;      // 0-10: framing, balance, rule of thirds
   adherence: number;        // 0-10: matches prompt description
   technical: number;        // 0-10: sharpness, artifacts, noise

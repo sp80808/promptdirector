@@ -22,6 +22,8 @@ import { ExportModal } from './components/modals/ExportModal';
 import { MediaViewer } from './components/modals/MediaViewer';
 import { VideoPlayer } from './components/modals/VideoPlayer';
 import { Moodboard } from './components/views/Moodboard';
+import { AutomationSettingsModal } from './components/modals/AutomationSettingsModal';
+import { AutomationSettingsModal } from './components/modals/AutomationSettingsModal';
 import { initializeDefaultAgents } from './utils/agents/registry';
 import { RenderQueue } from './components/layout/RenderQueue';
 
@@ -189,10 +191,25 @@ export default function App() {
               </div>
             </div>
 
+            <div className="border-t border-line pt-4">
+              <button
+                onClick={() => setModal({ kind: 'automation' })}
+                className="w-full text-left p-3 bg-ink-800 border border-line rounded hover:border-accent/50 transition-colors group"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-white">Automation & AI Agents</span>
+                  <span className="text-[8px] mono text-accent bg-accent/10 px-1.5 py-0.5 rounded">v6.0</span>
+                </div>
+                <p className="text-[9px] text-zinc-500 mt-1">Configure AI helpers: prompt enhancer, take curator, continuity</p>
+              </button>
+            </div>
+
             <button onClick={() => setModal(null)} className="w-full nle-button py-2 bg-accent text-black font-bold border-none">SAVE CONFIGURATION</button>
           </div>
         </div>
       )}
+
+      {modal?.kind === 'automation' && <AutomationSettingsModal />}
 
       {modal?.kind === 'media_viewer' && (
         <MediaViewer shotId={modal.shotId} takeId={modal.takeId} />

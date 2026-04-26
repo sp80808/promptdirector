@@ -1,8 +1,9 @@
 import { useStore } from "../../store";
 import { Scene, Shot } from "../../types";
 import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
-import { Clapperboard, Plus, Video, Trash2, GripVertical, PlayCircle } from "lucide-react";
+import { Clapperboard, Plus, Video, Trash2, GripVertical, PlayCircle, Sparkles } from "lucide-react";
 import { IconSparkle } from "../shared/Icons";
+import { AutoDirector } from "../../utils/automation/director";
 
 export function Timeline() {
   const { scenes, shots, moveShot, addShot, addScene, selectShot, selectedShotId, batchAddToRenderQueue } = useStore();
@@ -31,6 +32,16 @@ export function Timeline() {
     } else {
       alert("All shots in this scene already have an approved take.");
     }
+  };
+
+  const handleAutoDirectScene = async (scene: Scene) => {
+    if (!useStore.getState().apiKeys.siliconFlow) {
+      alert("Auto-Director requires API keys to be configured.");
+      return;
+    }
+    // We run it async so it doesn't block the UI thread completely,
+    // though the browser might complain if we don't handle state properly.
+    AutoDirector.produceScene(scene.id, useStore).catch(console.error);
   };
 
   return (
@@ -66,6 +77,12 @@ export function Timeline() {
                   <h3 className="text-sm font-bold text-white">{scene.title}</h3>
                 </div>
                 <div className="flex items-center gap-2">
+                  <button 
+                    onClick={() => handleAutoDirectScene(scene)}
+                    className="nle-button py-1 text-[10px] flex items-center gap-1 border-cyan-400/20 text-cyan-400 hover:bg-cyan-400/10"
+                  >
+                    <Sparkles size={10} /> AUTO-DIRECT
+                  </button>
                   <button 
                     onClick={() => handleRenderScene(scene)}
                     className="nle-button py-1 text-[10px] flex items-center gap-1 border-accent/20 text-accent hover:bg-accent/10"

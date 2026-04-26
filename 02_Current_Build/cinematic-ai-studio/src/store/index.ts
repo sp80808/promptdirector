@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { CinematicState, Shot, Take, Scene, AutomationSuggestion, AutomationConfig } from "../types";
+import { EventBus } from "../utils/agents/base";
 
 /* eCoT: 
    Unified State Engine for Cinematic.AI v5.0
@@ -17,6 +18,7 @@ const defaultAutomationConfig: AutomationConfig = {
   autoApproval: { enabled: false, minScore: 8.5 },
   continuityCheck: { enabled: true, severityThreshold: "warning" },
   shotSuggester: { enabled: true },
+  takeCurator: { enabled: true, minAutoScore: 8.5 },
 };
 
 export const useStore = create<CinematicState>()(
@@ -128,9 +130,14 @@ export const useStore = create<CinematicState>()(
         }));
         return id;
       },
-      updateShot: (id, p) => set((s) => ({
-        shots: { ...s.shots, [id]: { ...s.shots[id], ...p } }
-      })),
+      updateShot: (id, p) => {
+        const oldShot = s.shots[id];
+        const newShot = { ...oldShot, ...p };
+        set((s) => ({
+          shots: { ...s.shots, [id]: newShot }
+        }));
+        EventBus.emit('shot.updated', { shotId: id, changes: p, previous: oldShot });
+      },
       moveShot: (shotId, sourceSceneId, destSceneId, sourceIndex, destIndex) => set((state) => {
         const sourceScene = state.scenes.find(s => s.id === sourceSceneId);
         const destScene = state.scenes.find(s => s.id === destSceneId);
@@ -166,15 +173,29 @@ export const useStore = create<CinematicState>()(
         }));
         return id;
       },
-      updateTake: (shotId, takeId, p) => set((s) => ({
-        shots: {
-          ...s.shots,
-          [shotId]: {
-            ...s.shots[shotId],
-            takes: s.shots[shotId].takes.map(t => t.id === takeId ? { ...t, ...p } : t)
+      updateTake: (shotId, takeId, p) => set((s) => {
+        const oldTake = s.shots[shotId]?.takes.find(t => t.id === takeId);
+        const newState = {
+          shots: {
+            ...s.shots,
+            [shotId]: {
+              ...s.shots[shotId],
+              takes: s.shots[shotId].takes.map(t => t.id === takeId ? { ...t, ...p } : t)
+            }
+          }
+        };
+        
+        // Emit event after state update
+        const updatedTake = newState.shots[shotId].takes.find(t => t.id === takeId);
+        if (updatedTake) {
+          EventBus.emit('take.updated', { shotId, takeId, changes: p, previous: oldTake });
+          if (p.status === 'rendered' || (updatedTake.status === 'rendered' && !p.status)) {
+            EventBus.emit('take.rendered', { shotId, takeId, take: updatedTake });
           }
         }
-      })),
+        
+        return newState;
+      }),
       approveTake: (shotId, takeId) => set((s) => ({
         shots: {
           ...s.shots,
