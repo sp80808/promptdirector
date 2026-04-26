@@ -24,7 +24,8 @@ import {
   Wand2,
   Volume2,
   Music,
-  Waves
+  Waves,
+  StickyNote
 } from "lucide-react";
 
 export function Inspector() {
@@ -63,7 +64,7 @@ export function Inspector() {
     }
     
     enhanceTimeoutRef.current = window.setTimeout(async () => {
-      if (selectedShotId && value.trim().length > 3) {
+      if (selectedShotId && value.trim().length > 3 && !isEnhancing) {
         setIsEnhancing(true);
         try {
           await runAutomationForShot(selectedShotId);
@@ -73,6 +74,15 @@ export function Inspector() {
       }
     }, 1000); // 1s debounce
   };
+
+  // Cleanup timeout on unmount
+  React.useEffect(() => {
+    return () => {
+      if (enhanceTimeoutRef.current) {
+        clearTimeout(enhanceTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // Subscribe to take status changes for the current shot
   React.useEffect(() => {
@@ -166,10 +176,18 @@ export function Inspector() {
     <div className="h-full flex flex-col bg-ink-900 border-l border-line">
       <div className="p-4 border-b border-line flex items-center justify-between bg-ink-850 shrink-0">
         <h2 className="text-[10px] mono uppercase tracking-widest text-zinc-500 font-bold">Shot Inspector</h2>
-        <span className="text-[9px] mono text-accent px-1.5 py-0.5 rounded bg-accent/10">ID: {shot.id.slice(0, 5)}</span>
+        <div className="flex items-center gap-2">
+          <span className="text-[9px] mono text-accent px-1.5 py-0.5 rounded bg-accent/10">ID: {shot.id.slice(0, 5)}</span>
+          <button 
+            onClick={() => handleUpdate({ locked: !shot.locked })}
+            className={`p-1 rounded transition-colors ${shot.locked ? 'text-accent' : 'text-zinc-600 hover:text-zinc-400'}`}
+          >
+            <CheckCircle2 size={12} />
+          </button>
+        </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-6">
+      <div className="flex-1 overflow-y-auto p-4 space-y-6 pb-20">
         {/* Title */}
         <section className="space-y-2">
           <label className="text-[9px] mono uppercase text-zinc-500 font-bold">Shot Title</label>
@@ -249,6 +267,19 @@ export function Inspector() {
               </div>
             </div>
           )}
+        </section>
+
+        {/* Director Notes */}
+        <section className="space-y-2">
+           <label className="text-[9px] mono uppercase text-zinc-500 font-bold flex items-center gap-1.5">
+              <StickyNote size={10} className="text-lime-500" /> Director Notes
+           </label>
+           <textarea 
+             value={shot.notes || ""}
+             onChange={(e) => handleUpdate({ notes: e.target.value })}
+             className="nle-input text-[10px] h-16 resize-none bg-lime-500/5 border-lime-500/10 placeholder:text-zinc-700"
+             placeholder="Add production notes, feedback, or specific creative direction for this shot..."
+           />
         </section>
 
         {/* Optics & Motion */}
@@ -552,13 +583,16 @@ export function Inspector() {
 
                 {/* Quality score badge (top-left) */}
                 {qualityScore !== undefined && (
-                  <div className={`absolute top-1 left-1 text-[8px] mono font-bold px-1.5 py-0.5 rounded border ${
-                    isHighQuality 
-                      ? 'bg-lime-500/20 text-lime-500 border-lime-500/40'
-                      : isMediumQuality
-                        ? 'bg-yellow-500/20 text-yellow-500 border-yellow-500/40'
-                        : 'bg-red-500/20 text-red-500 border-red-500/40'
-                  }`}>
+                  <div 
+                    className={`absolute top-1 left-1 text-[8px] mono font-bold px-1.5 py-0.5 rounded border ${
+                      isHighQuality 
+                        ? 'bg-lime-500/20 text-lime-500 border-lime-500/40'
+                        : isMediumQuality
+                          ? 'bg-yellow-500/20 text-yellow-500 border-yellow-500/40'
+                          : 'bg-red-500/20 text-red-500 border-red-500/40'
+                    }`}
+                    title={take.metadata?.qualityBreakdown || `Quality: ${qualityScore.toFixed(1)}/10`}
+                  >
                     Q: {qualityScore.toFixed(1)}
                   </div>
                 )}

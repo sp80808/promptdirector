@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useStore } from "../../store";
-import { X, Play, Pause, SkipBack, SkipForward, Maximize, Volume2, Film } from "lucide-react";
+import { X, Play, Pause, SkipBack, SkipForward, Maximize, Volume2, Film, Camera } from "lucide-react";
 
 export function VideoPlayer() {
   const { scenes, shots, setModal } = useStore();
@@ -95,6 +95,52 @@ export function VideoPlayer() {
     );
   }
 
+  const handleCaptureCut = () => {
+    const html = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Director's Cut Preview</title>
+        <style>
+          body { background: #050505; color: #fff; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; }
+          #player { width: 90%; max-width: 1280px; aspect-ratio: 16/9; background: #000; border: 1px solid #222; border-radius: 12px; display: flex; align-items: center; justify-content: center; overflow: hidden; box-shadow: 0 20px 50px rgba(0,0,0,0.5); }
+          #title { margin-top: 20px; font-size: 14px; text-transform: uppercase; letter-spacing: 2px; color: #666; font-weight: bold; }
+          h1 { position: absolute; top: 40px; font-size: 12px; letter-spacing: 4px; color: #ff6b3d; }
+        </style>
+      </head>
+      <body>
+        <h1>DIRECTOR'S CUT</h1>
+        <div id="player"></div>
+        <p id="title"></p>
+        <script>
+          const seq = ${JSON.stringify(sequence)};
+          let idx = 0;
+          const container = document.getElementById('player');
+          const title = document.getElementById('title');
+          function playNext() {
+            if(idx >= seq.length) {
+              container.innerHTML = '<div style="text-align:center"><h2>Sequence Finished</h2><button onclick="idx=0;playNext()" style="background:#ff6b3d; border:none; padding:10px 20px; color:#000; font-weight:bold; cursor:pointer; border-radius:4px;">REPLAY</button></div>';
+              return;
+            }
+            const item = seq[idx];
+            container.innerHTML = item.isVideo ? '<video src="'+item.mediaUrl+'" autoplay muted style="width:100%;height:100%;object-fit:contain;"></video>' : '<img src="'+item.mediaUrl+'" style="width:100%;height:100%;object-fit:contain;">';
+            title.innerText = "SHOT " + (idx+1) + ": " + item.title;
+            const duration = item.isVideo ? 5000 : 3000;
+            setTimeout(() => { idx++; playNext(); }, duration);
+          }
+          playNext();
+        </script>
+      </body>
+      </html>
+    `;
+    const blob = new Blob([html], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = "Directors_Cut_Presentation.html";
+    a.click();
+  };
+
   return (
     <div className="fixed inset-0 bg-black z-[100] flex flex-col">
       <div className="absolute top-0 left-0 right-0 h-16 bg-gradient-to-b from-black/80 to-transparent flex items-center justify-between px-6 z-10 transition-opacity">
@@ -169,6 +215,12 @@ export function VideoPlayer() {
             </div>
 
             <div className="flex items-center gap-4 text-white">
+              <button 
+                onClick={handleCaptureCut}
+                className="hover:text-accent transition-colors flex items-center gap-1.5 px-3 py-1 bg-white/10 rounded-full text-[10px] mono font-bold"
+              >
+                <Camera size={14} /> CAPTURE CUT
+              </button>
               <button className="hover:text-accent transition-colors" onClick={() => setVolume(v => v === 0 ? 0.7 : 0)}>
                 {volume === 0 ? <Volume2 size={20} className="text-zinc-600" /> : <Volume2 size={20} />}
               </button>

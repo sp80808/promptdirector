@@ -47,6 +47,26 @@ export function downloadProductionBible(state: {
   document.body.removeChild(link);
 }
 
+export function saveProjectFile(state: any) {
+  const projectData = {
+    schema: "Cinematic.AI v5.0 Project",
+    timestamp: new Date().toISOString(),
+    characters: state.characters,
+    locations: state.locations,
+    props: state.props,
+    scenes: state.scenes,
+    shots: state.shots
+  };
+
+  const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(projectData, null, 2));
+  const downloadAnchorNode = document.createElement('a');
+  downloadAnchorNode.setAttribute("href", dataStr);
+  downloadAnchorNode.setAttribute("download", `Cinematic_Project_${Date.now()}.cai`);
+  document.body.appendChild(downloadAnchorNode);
+  downloadAnchorNode.click();
+  downloadAnchorNode.remove();
+}
+
 /**
  * Mocks downloading the sequence as an OpenTimelineIO (.otio) or EDL file.
 ...

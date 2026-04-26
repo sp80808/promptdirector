@@ -1,11 +1,11 @@
 import { useStore } from "../../store";
-import { downloadOTIO, downloadProductionBible } from "../../utils/export";
+import { downloadOTIO, downloadProductionBible, saveProjectFile } from "../../utils/export";
 import { IconDownload, IconClose } from "../shared/Icons";
-import { BookOpen } from "lucide-react";
+import { BookOpen, Save } from "lucide-react";
 
 export function ExportModal() {
   const state = useStore();
-  const { scenes, shots, characters, locations, setModal } = state;
+  const { scenes, shots, characters, locations, props, setModal } = state;
 
   const handleExportOTIO = () => {
     downloadOTIO(scenes, shots);
@@ -14,6 +14,11 @@ export function ExportModal() {
 
   const handleExportBible = () => {
     downloadProductionBible({ characters, locations, scenes, shots });
+    setModal(null);
+  };
+
+  const handleSaveProject = () => {
+    saveProjectFile({ characters, locations, scenes, shots, props });
     setModal(null);
   };
 
@@ -31,6 +36,18 @@ export function ExportModal() {
         </div>
 
         <div className="space-y-3">
+          <div className="p-4 bg-white/5 border border-white/5 rounded-lg space-y-2 group hover:border-accent/30 transition-all cursor-pointer" onClick={handleSaveProject}>
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-white flex items-center gap-2">
+                <Save size={14} className="text-cyan-400" /> Save Project (.cai)
+              </span>
+              <span className="text-[9px] mono px-1.5 py-0.5 bg-cyan-400/20 text-cyan-400 rounded">FULL STATE</span>
+            </div>
+            <p className="text-[10px] text-zinc-400 leading-relaxed">
+              Downloads your complete project, including characters, locations, scenes, and all AI-generated takes, so you can resume editing later.
+            </p>
+          </div>
+
           <div className="p-4 bg-white/5 border border-white/5 rounded-lg space-y-2 group hover:border-accent/30 transition-all cursor-pointer" onClick={handleExportBible}>
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold text-white flex items-center gap-2">

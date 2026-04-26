@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useStore } from './store';
 import { 
   Clapperboard, 
@@ -10,7 +10,10 @@ import {
   Search,
   Plus,
   Box,
-  Download
+  Download,
+  Upload,
+  Undo2,
+  Redo2
 } from 'lucide-react';
 import { Timeline } from './components/timeline/Timeline';
 import { CharacterForge } from './components/views/CharacterForge';
@@ -24,16 +27,34 @@ import { VideoPlayer } from './components/modals/VideoPlayer';
 import { Moodboard } from './components/views/Moodboard';
 import { AutomationSettingsModal } from './components/modals/AutomationSettingsModal';
 import { initializeDefaultAgents, initializeAutomationTriggers } from './utils/agents/registry';
-import { initializeDefaultAgents, initializeAutomationTriggers } from './utils/agents/registry';
-import { AutomationSettingsModal } from './components/modals/AutomationSettingsModal';
-import { initializeDefaultAgents } from './utils/agents/registry';
 import { RenderQueue } from './components/layout/RenderQueue';
 
 type View = 'project' | 'characters' | 'concepts' | 'locations' | 'props';
 
 export default function App() {
-  const { modal, setModal, apiKeys, setApiKey } = useStore();
+  const { modal, setModal, apiKeys, setApiKey, importSequence, undo, redo, past, future } = useStore();
   const [currentView, setCurrentView] = useState<View>('project');
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const json = JSON.parse(event.target?.result as string);
+        if (json.schema && json.schema.includes("Cinematic.AI")) {
+          importSequence(json);
+        } else {
+          alert("Invalid project file format.");
+        }
+      } catch (err) {
+        console.error("Failed to import", err);
+      }
+    };
+    reader.readAsText(file);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
 
   // Initialize agents and automation triggers on mount
   useEffect(() => {
@@ -43,14 +64,27 @@ export default function App() {
 
   React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Ignore if typing in an input
+      // Cmd/Ctrl + Z: Undo
+      if ((e.metaKey || e.ctrlKey) && e.key === 'z' && !e.shiftKey) {
+        if (document.activeElement?.tagName === 'INPUT' || document.activeElement?.tagName === 'TEXTAREA') return;
+        e.preventDefault();
+        undo();
+      }
+      // Cmd/Ctrl + Shift + Z: Redo
+      if ((e.metaKey || e.ctrlKey) && (e.key === 'z' || e.key === 'y') && e.shiftKey) {
+        if (document.activeElement?.tagName === 'INPUT' || document.activeElement?.tagName === 'TEXTAREA') return;
+        e.preventDefault();
+        redo();
+      }
+
+      // Ignore other keys if typing in an input
       if (document.activeElement?.tagName === 'INPUT' || document.activeElement?.tagName === 'TEXTAREA') return;
 
       const key = e.key.toLowerCase();
       
       // J: Rewind (placeholder for now)
       if (key === 'j') console.log('Rewind');
-      // K: Play/Pause (placeholder)
+      // K: Play/Pause
       if (key === 'k') setModal({ kind: 'player' });
       // L: Fast Forward (placeholder)
       if (key === 'l') console.log('Fast Forward');
@@ -58,7 +92,7 @@ export default function App() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [setModal]);
+  }, [setModal, undo, redo]);
 
   return (
     <div className="h-screen flex flex-col bg-ink-950 text-slate-300">
@@ -71,6 +105,26 @@ export default function App() {
           <span className="font-bold tracking-tighter text-lg text-white">CINEMATIC<span className="text-accent">.AI</span></span>
           <div className="h-4 w-[1px] bg-line mx-2" />
           <span className="text-[10px] mono text-zinc-500 uppercase tracking-widest">v5.0 Studio</span>
+
+          <div className="h-4 w-[1px] bg-line mx-2" />
+          <div className="flex items-center gap-1">
+            <button 
+              onClick={undo}
+              disabled={past.length === 0}
+              className="p-1.5 hover:bg-ink-800 rounded text-zinc-400 disabled:opacity-20 transition-all"
+              title="Undo (Cmd+Z)"
+            >
+              <Undo2 size={14} />
+            </button>
+            <button 
+              onClick={redo}
+              disabled={future.length === 0}
+              className="p-1.5 hover:bg-ink-800 rounded text-zinc-400 disabled:opacity-20 transition-all"
+              title="Redo (Cmd+Shift+Z)"
+            >
+              <Redo2 size={14} />
+            </button>
+          </div>
         </div>
 
         <div className="flex items-center gap-4">
@@ -81,12 +135,35 @@ export default function App() {
             <Play className="w-3 h-3 text-lime-400 fill-lime-400 group-hover:scale-110 transition-transform" />
             <span className="text-[10px] mono text-lime-400 font-bold uppercase tracking-widest ml-1">Play Cut</span>
           </button>
+          
+          <input 
+            type="file" 
+            ref={fileInputRef} 
+            onChange={handleImport} 
+            accept=".json,.cai" 
+            className="hidden" 
+          />
+          <button 
+            onClick={() => fileInputRef.current?.click()}
+            className="nle-button py-1 px-3 flex items-center gap-2 border-cyan-400/20 text-cyan-400 hover:bg-cyan-400/10"
+          >
+            <Upload size={12} /> IMPORT
+          </button>
+
           <button 
             onClick={() => setModal({ kind: 'export' })}
             className="nle-button py-1 px-3 flex items-center gap-2 border-accent/20 text-accent hover:bg-accent/10"
           >
             <Download size={12} /> EXPORT
           </button>
+
+          <button 
+            onClick={() => setModal({ kind: 'automation' })}
+            className="nle-button py-1 px-3 flex items-center gap-2 border-purple-400/20 text-purple-400 hover:bg-purple-400/10"
+          >
+            <SettingsIcon size={12} /> AI AGENTS
+          </button>
+
           <button 
             onClick={() => setModal({ kind: 'settings' })}
             className="p-2 hover:bg-ink-800 rounded transition-colors"
@@ -192,19 +269,6 @@ export default function App() {
                   className="nle-input" 
                 />
               </div>
-            </div>
-
-            <div className="border-t border-line pt-4">
-              <button
-                onClick={() => setModal({ kind: 'automation' })}
-                className="w-full text-left p-3 bg-ink-800 border border-line rounded hover:border-accent/50 transition-colors group"
-              >
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-white">Automation & AI Agents</span>
-                  <span className="text-[8px] mono text-accent bg-accent/10 px-1.5 py-0.5 rounded">v6.0</span>
-                </div>
-                <p className="text-[9px] text-zinc-500 mt-1">Configure AI helpers: prompt enhancer, take curator, continuity</p>
-              </button>
             </div>
 
             <button onClick={() => setModal(null)} className="w-full nle-button py-2 bg-accent text-black font-bold border-none">SAVE CONFIGURATION</button>

@@ -69,6 +69,7 @@ export type Take = {
     aspectRatio: string;
     initImageUrl?: string;
     qualityScore?: number;     // 0-10 from TakeCuratorAgent
+    qualityBreakdown?: string; // Human-readable assessment
     speechUrl?: string;        // Generated voice audio
     lipSyncUrl?: string;       // Lip-synced video
   };
@@ -164,7 +165,8 @@ export type Scene = {
 
 export type Modal =
   | null
-  | { kind: "settings" | "automation" }
+  | { kind: "settings" }
+  | { kind: "automation" }
   | { kind: "character"; id?: string }
   | { kind: "location"; id?: string }
   | { kind: "prop"; id?: string }
@@ -237,4 +239,9 @@ export interface CinematicState {
 
   // Project Import/Export
   importSequence: (data: any) => void;
+
+  // History Actions
+  undo: () => void;
+  redo: () => void;
+  saveSnapshot: () => void;
 }

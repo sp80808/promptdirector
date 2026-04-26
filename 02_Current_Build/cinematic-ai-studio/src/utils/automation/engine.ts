@@ -64,8 +64,12 @@ export async function runAutomationForShot(shotId: string): Promise<number> {
       if (takeId && metrics) {
         const take = shot.takes.find(t => t.id === takeId);
         if (take) {
-          // Merge qualityScore into metadata
-          const updatedMetadata = { ...(take.metadata || {}), qualityScore: metrics.overall };
+          // Merge quality metrics into metadata
+          const updatedMetadata = { 
+            ...(take.metadata || {}), 
+            qualityScore: metrics.overall,
+            qualityBreakdown: metrics.breakdown
+          };
           state.updateTake(shotId, takeId, { metadata: updatedMetadata });
           
           // Check auto-approval condition
@@ -74,6 +78,8 @@ export async function runAutomationForShot(shotId: string): Promise<number> {
             state.approveTake(shotId, takeId);
             console.log(`[Automation] Auto-approved take ${takeId.slice(0,6)} (score: ${metrics.overall.toFixed(1)})`);
           }
+        }
+      }
         }
       }
       added++;

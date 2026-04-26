@@ -63,7 +63,21 @@ export function RenderQueue() {
           <Clock size={14} className="text-accent" />
           <h3 className="text-[10px] mono uppercase font-bold text-white tracking-widest">Active Jobs</h3>
         </div>
-        <span className="text-[9px] mono bg-accent/20 text-accent px-1.5 py-0.5 rounded-full">{renderQueue.length}</span>
+        <div className="flex items-center gap-2">
+          {renderQueue.some(q => q.status === 'failed') && (
+            <button 
+              onClick={() => {
+                renderQueue.forEach(q => {
+                  if (q.status === 'failed') updateRenderQueueItem(q.id, { status: 'pending', progress: 0 });
+                });
+              }}
+              className="text-[8px] mono text-red-400 hover:underline"
+            >
+              RETRY FAILED
+            </button>
+          )}
+          <span className="text-[9px] mono bg-accent/20 text-accent px-1.5 py-0.5 rounded-full">{renderQueue.length}</span>
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto p-2 space-y-1">
