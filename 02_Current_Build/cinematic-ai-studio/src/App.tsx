@@ -22,6 +22,7 @@ import { ExportModal } from './components/modals/ExportModal';
 import { MediaViewer } from './components/modals/MediaViewer';
 import { VideoPlayer } from './components/modals/VideoPlayer';
 import { Moodboard } from './components/views/Moodboard';
+import { RenderQueue } from './components/layout/RenderQueue';
 
 type View = 'project' | 'characters' | 'concepts' | 'locations' | 'props';
 
@@ -39,17 +40,17 @@ export default function App() {
       // J: Rewind (placeholder for now)
       if (key === 'j') console.log('Rewind');
       // K: Play/Pause (placeholder)
-      if (key === 'k') console.log('Toggle Playback');
+      if (key === 'k') setModal({ kind: 'player' });
       // L: Fast Forward (placeholder)
       if (key === 'l') console.log('Fast Forward');
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  }, [setModal]);
 
   return (
-    <div className="h-screen flex flex-col bg-ink-950">
+    <div className="h-screen flex flex-col bg-ink-950 text-slate-300">
       {/* Top Header */}
       <header className="h-12 border-b border-line flex items-center justify-between px-4 bg-ink-900 z-50">
         <div className="flex items-center gap-3">
@@ -101,13 +102,13 @@ export default function App() {
             onClick={() => setCurrentView('characters')} 
           />
           <NavIcon 
-            icon={<MapIcon />} 
+            icon={<Search />} 
             label="Concepts" 
             active={currentView === 'concepts'} 
             onClick={() => setCurrentView('concepts')} 
           />
           <NavIcon 
-            icon={<Search />} 
+            icon={<MapIcon />} 
             label="Locations" 
             active={currentView === 'locations'} 
             onClick={() => setCurrentView('locations')} 
@@ -194,6 +195,8 @@ export default function App() {
       {modal?.kind === 'script_breakdown' && <ScriptBreakdownModal />}
       {modal?.kind === 'export' && <ExportModal />}
       {modal?.kind === 'player' && <VideoPlayer />}
+
+      <RenderQueue />
     </div>
   );
 }
