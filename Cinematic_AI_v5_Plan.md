@@ -53,10 +53,13 @@ A high-end, NLE-style web application for professional AI filmmaking. It bridges
 - [x] **Phase 2: Forge & Library**: Character/Location/Prop management.
 - [x] **Phase 3: Sequencer & Smart Input**: Timeline and "@" mentioning.
 - [x] **Phase 4: AI Integration & Audio**: SiliconFlow bridge, Foley engine, Inpainting.
-- [ ] **Phase 5: Advanced Intelligence**:
-  - [ ] **VLM Auto-Audit**: Vision-Language Model rating of generated takes.
-  - [ ] **Lip-Sync Pipeline**: Automated dialogue animation.
+- [x] **Phase 5: Advanced Intelligence**:
+  - [x] **VLM Auto-Audit**: Vision-Language Model rating of generated takes.
+  - [x] **Lip-Sync Pipeline**: Automated dialogue animation.
   - [ ] **Asset Management**: Local caching and advanced metadata tagging.
+- [ ] **Phase 6: Quality of Life**:
+  - [ ] **Auto-Approve Heuristics**: Automatically approve generated takes with high VLM scores.
+  - [ ] **Undo / Redo History Stack**: Advanced timeline state management.
 
 ---
 

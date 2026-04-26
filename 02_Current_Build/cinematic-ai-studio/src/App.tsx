@@ -23,6 +23,8 @@ import { MediaViewer } from './components/modals/MediaViewer';
 import { VideoPlayer } from './components/modals/VideoPlayer';
 import { Moodboard } from './components/views/Moodboard';
 import { AutomationSettingsModal } from './components/modals/AutomationSettingsModal';
+import { initializeDefaultAgents, initializeAutomationTriggers } from './utils/agents/registry';
+import { initializeDefaultAgents, initializeAutomationTriggers } from './utils/agents/registry';
 import { AutomationSettingsModal } from './components/modals/AutomationSettingsModal';
 import { initializeDefaultAgents } from './utils/agents/registry';
 import { RenderQueue } from './components/layout/RenderQueue';
@@ -33,9 +35,10 @@ export default function App() {
   const { modal, setModal, apiKeys, setApiKey } = useStore();
   const [currentView, setCurrentView] = useState<View>('project');
 
-  // Initialize agents on mount
+  // Initialize agents and automation triggers on mount
   useEffect(() => {
     initializeDefaultAgents();
+    initializeAutomationTriggers();
   }, []);
 
   React.useEffect(() => {

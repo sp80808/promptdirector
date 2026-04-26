@@ -7,8 +7,26 @@
 
 import { useStore } from '@/store';
 import { AgentRegistry } from '@/utils/agents/registry';
-import { AgentContext, AgentResult } from '@/utils/agents/base';
+import { AgentContext, AgentResult, EventBus } from '@/utils/agents/base';
 import type { Take } from '@/types';
+
+/**
+ * Initialize event-driven automation triggers.
+ * Call once on app startup (e.g., in App.tsx).
+ */
+export function initializeAutomationTriggers() {
+  // When a take finishes rendering → run TakeCuratorAgent for that shot
+  EventBus.subscribe('take.rendered', async (event) => {
+    const { shotId, takeId } = event.payload;
+    console.log(`[AutomationTrigger] take.rendered → running agents for shot ${shotId.slice(0,6)}`);
+    await runAutomationForShot(shotId);
+  });
+
+  // When shot is updated (e.g., prompt changed) → run PromptEnhancer (if debounced already, this is redundant but OK)
+  // Actually we rely on UI debounce, so skip event subscription here to avoid duplicate runs
+  
+  console.log('[Automation] Event triggers initialized');
+}
 
 /**
  * Run all enabled agents for a specific shot.
@@ -46,16 +64,15 @@ export async function runAutomationForShot(shotId: string): Promise<number> {
       if (takeId && metrics) {
         const take = shot.takes.find(t => t.id === takeId);
         if (take) {
-          // Update take with quality score (we need to call store update)
-          state.updateTake(shotId, takeId, { 
-            metadata: { ...take.metadata, qualityScore: metrics.overall }
-          });
+          // Merge qualityScore into metadata
+          const updatedMetadata = { ...(take.metadata || {}), qualityScore: metrics.overall };
+          state.updateTake(shotId, takeId, { metadata: updatedMetadata });
           
           // Check auto-approval condition
           const autoApprovalConfig = state.automationConfig.autoApproval;
           if (autoApprovalConfig?.enabled && metrics.overall >= autoApprovalConfig.minScore) {
             state.approveTake(shotId, takeId);
-            console.log(`[Automation] Auto-approved take ${takeId.slice(0,6)} (score: ${metrics.overall})`);
+            console.log(`[Automation] Auto-approved take ${takeId.slice(0,6)} (score: ${metrics.overall.toFixed(1)})`);
           }
         }
       }

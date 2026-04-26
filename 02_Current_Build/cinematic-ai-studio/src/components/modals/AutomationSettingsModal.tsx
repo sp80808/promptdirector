@@ -82,9 +82,9 @@ export function AutomationSettingsModal() {
                   ))}
                 </div>
                 <p className="text-[8px] text-zinc-600">
-                  {level === 'light' && 'Minimal expansion: fixes grammar, adds key terms only.'}
-                  {level === 'moderate' && 'Balanced: adds 2-3 cinematic details per prompt.'}
-                  {level === 'aggressive' && 'Full rewrite: extensive detail and terminology.'}
+                  {automationConfig.promptEnhancer.level === 'light' && 'Minimal expansion: fixes grammar, adds key terms only.'}
+                  {automationConfig.promptEnhancer.level === 'moderate' && 'Balanced: adds 2-3 cinematic details per prompt.'}
+                  {automationConfig.promptEnhancer.level === 'aggressive' && 'Full rewrite: extensive detail and terminology.'}
                 </p>
               </div>
             )}

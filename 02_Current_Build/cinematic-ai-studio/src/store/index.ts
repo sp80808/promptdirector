@@ -171,6 +171,7 @@ export const useStore = create<CinematicState>()(
             [shotId]: { ...s.shots[shotId], takes: [...s.shots[shotId].takes, take] }
           }
         }));
+        EventBus.emit('take.created', { shotId, takeId: id, take });
         return id;
       },
       updateTake: (shotId, takeId, p) => set((s) => {
