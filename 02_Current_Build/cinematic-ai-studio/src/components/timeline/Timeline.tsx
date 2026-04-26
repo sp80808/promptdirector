@@ -2,6 +2,7 @@ import { useStore } from "../../store";
 import { Scene, Shot } from "../../types";
 import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
 import { Clapperboard, Plus, Video, Trash2, GripVertical } from "lucide-react";
+import { IconSparkle } from "../shared/Icons";
 
 export function Timeline() {
   const { scenes, shots, moveShot, addShot, addScene, selectShot, selectedShotId } = useStore();
@@ -26,9 +27,16 @@ export function Timeline() {
            <span className="text-[10px] mono uppercase tracking-widest text-zinc-500 font-bold">Sequence Editor</span>
            <button 
              onClick={() => addScene("New Scene")}
-             className="text-[10px] mono text-accent hover:underline flex items-center gap-1"
+             className="text-[10px] mono text-zinc-500 hover:text-accent hover:underline flex items-center gap-1 transition-all"
            >
              <Plus size={10} /> NEW SCENE
+           </button>
+           <div className="h-3 w-[1px] bg-white/10" />
+           <button 
+             onClick={() => useStore.getState().setModal({ kind: "script_breakdown" })}
+             className="text-[10px] mono text-accent hover:underline flex items-center gap-1 transition-all"
+           >
+             <IconSparkle size={10} /> AUTO-STORYBOARD
            </button>
         </div>
       </div>

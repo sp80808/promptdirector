@@ -16,6 +16,7 @@ import { CharacterForge } from './components/views/CharacterForge';
 import { LocationScout } from './components/views/LocationScout';
 import { PropRoom } from './components/views/PropRoom';
 import { Inspector } from './components/inspector/Inspector';
+import { ScriptBreakdownModal } from './components/modals/ScriptBreakdownModal';
 import { MediaViewer } from './components/modals/MediaViewer';
 
 type View = 'project' | 'characters' | 'locations' | 'props';
