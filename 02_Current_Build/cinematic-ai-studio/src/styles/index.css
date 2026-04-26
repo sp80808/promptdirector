@@ -1,0 +1,50 @@
+@import "tailwindcss";
+
+@theme {
+  --color-ink-950: #050505;
+  --color-ink-900: #0a0a0a;
+  --color-ink-850: #121212;
+  --color-ink-800: #1a1a1a;
+  --color-line: #222222;
+  --color-accent: #ff6b3d;
+  --color-cyan: #38e1ff;
+  --color-lime: #b6ff5c;
+}
+
+@layer base {
+  body {
+    @apply bg-ink-950 text-slate-300 antialiased overflow-hidden selection:bg-accent/30 selection:text-white;
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+
+  /* Custom Scrollbar for NLE look */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-ink-800 border border-line rounded-full hover:bg-line transition-colors;
+  }
+
+  .mono {
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  }
+}
+
+/* NLE Components */
+@layer components {
+  .nle-panel {
+    @apply bg-ink-900 border border-line rounded-lg overflow-hidden;
+  }
+  
+  .nle-button {
+    @apply px-3 py-1.5 bg-ink-800 border border-line rounded text-xs font-medium hover:bg-ink-850 hover:border-accent/50 transition-all active:scale-95 disabled:opacity-50;
+  }
+
+  .nle-input {
+    @apply w-full bg-ink-950 border border-line rounded px-2 py-1.5 text-xs text-zinc-100 outline-none focus:border-accent transition-colors;
+  }
+}
