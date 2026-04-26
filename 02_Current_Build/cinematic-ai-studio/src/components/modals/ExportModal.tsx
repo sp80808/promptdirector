@@ -1,12 +1,19 @@
 import { useStore } from "../../store";
-import { downloadOTIO } from "../../utils/export";
+import { downloadOTIO, downloadProductionBible } from "../../utils/export";
 import { IconDownload, IconClose } from "../shared/Icons";
+import { BookOpen } from "lucide-react";
 
 export function ExportModal() {
-  const { scenes, shots, setModal } = useStore();
+  const state = useStore();
+  const { scenes, shots, characters, locations, setModal } = state;
 
-  const handleExport = () => {
+  const handleExportOTIO = () => {
     downloadOTIO(scenes, shots);
+    setModal(null);
+  };
+
+  const handleExportBible = () => {
+    downloadProductionBible({ characters, locations, scenes, shots });
     setModal(null);
   };
 
@@ -15,32 +22,52 @@ export function ExportModal() {
       <div className="w-full max-w-md bg-[#121212] border border-white/10 rounded-xl shadow-2xl overflow-hidden p-6 space-y-6">
         <div className="flex justify-between items-center">
           <div className="space-y-1">
-            <h2 className="text-xl font-bold text-white">Export Sequence</h2>
-            <p className="text-[10px] mono text-zinc-500 uppercase tracking-widest">Post-Production Handover</p>
+            <h2 className="text-xl font-bold text-white">Export Project</h2>
+            <p className="text-[10px] mono text-zinc-500 uppercase tracking-widest">Select Output Format</p>
           </div>
           <button onClick={() => setModal(null)} className="p-1 text-zinc-500 hover:text-white transition-colors">
             <IconClose className="w-5 h-5" />
           </button>
         </div>
 
-        <div className="space-y-4">
-          <div className="p-4 bg-white/5 border border-white/5 rounded-lg space-y-2">
+        <div className="space-y-3">
+          <div className="p-4 bg-white/5 border border-white/5 rounded-lg space-y-2 group hover:border-accent/30 transition-all cursor-pointer" onClick={handleExportBible}>
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-white flex items-center gap-2">
+                <BookOpen size={14} className="text-accent" /> Production Bible (.md)
+              </span>
+              <span className="text-[9px] mono px-1.5 py-0.5 bg-lime-500/20 text-lime-500 rounded">FREE</span>
+            </div>
+            <p className="text-[10px] text-zinc-400 leading-relaxed">
+              Complete project documentation including character bibles, location profiles, and full shot breakdowns. Perfect for pitch decks.
+            </p>
+          </div>
+
+          <div className="p-4 bg-white/5 border border-white/5 rounded-lg space-y-2 group hover:border-accent/30 transition-all cursor-pointer" onClick={handleExportOTIO}>
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold text-white">OpenTimelineIO (.otio)</span>
               <span className="text-[9px] mono px-1.5 py-0.5 bg-accent/20 text-accent rounded">PRO</span>
             </div>
-            <p className="text-[11px] text-zinc-400 leading-relaxed">
-              Standard interchange format for DaVinci Resolve, Premiere Pro, and Final Cut Pro. Includes all shot metadata and media references.
+            <p className="text-[10px] text-zinc-400 leading-relaxed">
+              Standard interchange format for DaVinci Resolve and Premiere Pro. Includes all shot metadata and media references.
             </p>
           </div>
         </div>
 
-        <button 
-          onClick={handleExport}
-          className="w-full nle-button py-3 bg-accent text-black font-bold border-none flex items-center justify-center gap-2"
-        >
-          <IconDownload size={16} /> DOWNLOAD SEQUENCE
-        </button>
+        <div className="pt-2 flex flex-col gap-2">
+          <button 
+            onClick={handleExportBible}
+            className="w-full nle-button py-3 bg-white/5 hover:bg-white/10 text-white font-bold border-line flex items-center justify-center gap-2 transition-all"
+          >
+            <BookOpen size={16} /> GENERATE PRODUCTION BIBLE
+          </button>
+          <button 
+            onClick={handleExportOTIO}
+            className="w-full nle-button py-3 bg-accent text-black font-bold border-none flex items-center justify-center gap-2"
+          >
+            <IconDownload size={16} /> DOWNLOAD SEQUENCE (JSON)
+          </button>
+        </div>
       </div>
     </div>
   );
