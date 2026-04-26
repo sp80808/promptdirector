@@ -146,12 +146,32 @@ export const useStore = create<CinematicState>()(
         }
       })),
 
-      addSceneFromScript: (title, scriptShots) => {
+      addSceneFromScript: (title, breakdown) => {
         const sceneId = uid();
         const shotIds: string[] = [];
         const newShots: Record<string, Shot> = { ...get().shots };
+        const existingChars = get().characters;
+        const newChars = [...existingChars];
 
-        scriptShots.forEach(ss => {
+        // 1. Process New Characters
+        breakdown.characters.forEach(bc => {
+          const exists = existingChars.find(c => c.name.toLowerCase() === bc.name.toLowerCase());
+          if (!exists) {
+            newChars.push({
+              id: uid(),
+              name: bc.name,
+              displayName: bc.name,
+              traits: bc.traits,
+              seed: Math.floor(Math.random() * 9999999),
+              color: "#" + Math.floor(Math.random()*16777215).toString(16),
+              masterReferenceImages: [],
+              outfits: []
+            });
+          }
+        });
+
+        // 2. Process Shots
+        breakdown.shots.forEach(ss => {
           const id = uid();
           shotIds.push(id);
           newShots[id] = {
@@ -161,8 +181,9 @@ export const useStore = create<CinematicState>()(
             characterIds: [],
             outfitIds: {},
             rawPrompt: ss.description,
-            optics: "",
+            optics: ss.optics || "",
             motion: "",
+            duration: ss.duration || 3.0,
             takes: [],
             settings: {
               model: "black-forest-labs/FLUX.1-schnell",
@@ -175,6 +196,7 @@ export const useStore = create<CinematicState>()(
         });
 
         set((state) => ({
+          characters: newChars,
           scenes: [...state.scenes, { id: sceneId, title, shotIds }],
           shots: newShots
         }));

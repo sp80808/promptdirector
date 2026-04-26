@@ -62,6 +62,7 @@ A high-end, NLE-style web application for professional AI filmmaking. It bridges
 - **Added**: "Auto-Storyboard" (Script Breakdown).
 
 ### Phase 4: AI Integration & Continuity [IN PROGRESS]
+- **Detailed Specification**: See **[PHASE_4_PLAN.md](./PHASE_4_PLAN.md)**.
 - Implement the BYOK Settings panel. [COMPLETED]
 - Build the "Generation Task Queue".
 - Add "Frame Chaining" logic (Approved Take -> Init Image).

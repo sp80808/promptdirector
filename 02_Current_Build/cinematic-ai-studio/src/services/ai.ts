@@ -56,53 +56,56 @@ Example Output: 35mm anamorphic lens, high-contrast chiaroscuro lighting, heavy 
   }
 }
 
-export async function autoBreakdownScript(apiKey: string, scriptText: string): Promise<{ title: string; description: string }[]> {
+export interface ScriptBreakdownResponse {
+  characters: { name: string; traits: string }[];
+  shots: { title: string; description: string; duration: number; optics: string }[];
+}
+
+export async function autoBreakdownScript(apiKey: string, scriptText: string): Promise<ScriptBreakdownResponse> {
   try {
     const ai = new GoogleGenAI({ apiKey });
-    const prompt = `You are an expert film director and AI prompt engineer.
-Analyze the following script excerpt and break it down into a sequence of distinct cinematic shots.
-For each shot, provide a short title (e.g., "Wide Establishing Shot") and a highly descriptive text-to-image prompt.
-Format the output STRICTLY as a JSON array of objects. Do not include markdown code block formatting like \`\`\`json.
-Example format:
-[
-  { "title": "Wide Establishing Shot", "description": "Wide shot, desolate cyberpunk city street, neon signs reflecting in puddles, rain." },
-  { "title": "Close Up Character", "description": "Close up, female character looking determined, blue rim light, 35mm lens." }
-]
+    const prompt = `You are an expert film director and AI production assistant.
+Analyze the following script excerpt and provide:
+1. A list of unique CHARACTERS found, with a short description of their physical traits and age inferred from context.
+2. A sequence of distinct cinematic SHOTS. For each shot, provide:
+   - title: Short descriptive title.
+   - description: A highly descriptive technical text-to-image prompt.
+   - duration: Suggested length in seconds (e.g., 2.5, 4.0, 6.0).
+   - optics: Suggested lens (e.g., "35mm anamorphic", "85mm prime").
+
+Format the output STRICTLY as a single JSON object.
+Example:
+{
+  "characters": [{ "name": "Sarah", "traits": "Mid-30s, weary eyes, wearing a tattered flight suit." }],
+  "shots": [
+    { "title": "Wide Establishing", "description": "High angle wide shot of a desert planet...", "duration": 5.0, "optics": "24mm wide" }
+  ]
+}
 
 Script:
 ${scriptText}
 `;
 
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-2.0-flash',
       contents: prompt,
-      config: {
-        temperature: 0.7,
-      }
+      config: { temperature: 0.7 }
     });
 
     const text = response.text();
-    if (!text) throw new Error("Empty response from Gemini");
-
-    // Try to parse the JSON output directly or extract it if wrapped in markdown
     let jsonStr = text;
-    if (text.includes('```json')) {
-      const match = text.match(/```json\s*([\s\S]*?)\s*```/);
-      if (match) jsonStr = match[1];
-    } else if (text.includes('```')) {
-      const match = text.match(/```\s*([\s\S]*?)\s*```/);
-      if (match) jsonStr = match[1];
-    }
+    if (text.includes('```json')) jsonStr = text.match(/```json\s*([\s\S]*?)\s*```/)?.[1] || text;
+    else if (text.includes('```')) jsonStr = text.match(/```\s*([\s\S]*?)\s*```/)?.[1] || text;
 
-    const parsed = JSON.parse(jsonStr);
-    if (!Array.isArray(parsed)) throw new Error("Invalid format returned");
-    return parsed;
+    return JSON.parse(jsonStr);
   } catch (error) {
     console.error("AutoBreakdown Error:", error);
-    // Return a mock if API fails for local testing
-    return [
-      { title: "Establishing Shot", description: "Wide cinematic establishing shot based on the provided script..." },
-      { title: "Medium Shot", description: "Medium coverage tracking shot." }
-    ];
+    return {
+      characters: [],
+      shots: [
+        { title: "Establishing Shot", description: "Cinematic wide shot...", duration: 4.0, optics: "35mm" },
+        { title: "Medium Close Up", description: "Character reaction shot...", duration: 3.0, optics: "50mm" }
+      ]
+    };
   }
 }

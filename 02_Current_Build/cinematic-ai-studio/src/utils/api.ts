@@ -27,6 +27,27 @@ export class GenerationAPI {
 
     const seed = Math.floor(Math.random() * 999999999);
 
+    // Frame chaining: Get init_image from previous shot's approved take
+    let initImageUrl: string | undefined;
+    if (shot.usePreviousFrameAsInit && state.shots) {
+      // Find previous shot in sequence order
+      const currentScene = state.scenes.find(s => s.id === shot.sceneId);
+      if (currentScene) {
+        const currentIndex = currentScene.shotIds.indexOf(shot.id);
+        if (currentIndex > 0) {
+          const prevShotId = currentScene.shotIds[currentIndex - 1];
+          const prevShot = state.shots[prevShotId];
+          if (prevShot?.approvedTakeId) {
+            const prevTake = prevShot.takes.find(t => t.id === prevShot.approvedTakeId);
+            if (prevTake?.fullImageUrl || prevTake?.videoUrl) {
+              initImageUrl = prevTake.fullImageUrl || prevTake.videoUrl;
+              console.log(`[FrameChain] Using init_image from shot "${prevShot.title}" (take: ${prevShot.approvedTakeId.slice(0,6)})`);
+            }
+          }
+        }
+      }
+    }
+
     const initialTake: Omit<Take, "id" | "shotId"> = {
       seed,
       status: "rendering",
@@ -38,7 +59,129 @@ export class GenerationAPI {
         negativePrompt: settings.negativePrompt,
         cfgScale: settings.cfgScale,
         steps: settings.steps,
-        aspectRatio: settings.aspectRatio
+        aspectRatio: settings.aspectRatio,
+        initImageUrl: initImageUrl, // Store reference for debugging
+      }
+    };
+
+    const takeId = Math.random().toString(36).slice(2, 11);
+    onTakeCreated(takeId);
+
+    // Simulated mode (no API key)
+    if (!apiKey) {
+      console.log("No API key provided. Simulating generation...\nPrompt:", finalPrompt.substring(0, 200) + "...");
+      this.simulateProgress(takeId, onTakeUpdated, initImageUrl);
+      return;
+    }
+
+    // Real SiliconFlow API call
+    try {
+      const payload: any = {
+        model: settings.model,
+        prompt: finalPrompt,
+        negative_prompt: settings.negativePrompt,
+        image_size: imageSize,
+        batch_size: 1,
+        seed: seed,
+        num_inference_steps: settings.steps,
+        guidance_scale: settings.cfgScale
+      };
+      
+      // Add init_image if frame chaining is active
+      if (initImageUrl) {
+        payload.image_url = initImageUrl;  // SiliconFlow param name
+        // If using init_image, increase denoising slightly for creative variation
+        payload.denoising_strength = 0.4; 
+      }
+
+      const response = await fetch(`${SILICON_FLOW_URL}/images/generations`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${apiKey}`
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (!response.ok) {
+        const errBody = await response.text();
+        throw new Error(`API Error ${response.status}: ${errBody}`);
+      }
+
+      const data = await response.json();
+      
+      if (data.images && data.images[0]) {
+        onTakeUpdated(takeId, {
+          status: "rendered",
+          thumbUrl: data.images[0].url,
+          fullImageUrl: data.images[0].url,
+        });
+      } else {
+        throw new Error("No image returned from API");
+      }
+    } catch (err: any) {
+      console.error("[GenerationAPI]", err);
+      onTakeUpdated(takeId, { 
+        status: "failed",
+        error: err.message 
+      });
+    }
+  }
+
+  /** Simulates generation progress for demo mode */
+  private static simulateProgress(
+    takeId: string, 
+    onTakeUpdated: (takeId: string, updates: Partial<Take>) => void,
+    initImageUrl?: string
+  ) {
+    let progress = 0;
+    const steps = [25, 50, 75, 100];
+    let stepIdx = 0;
+    
+    const interval = setInterval(() => {
+      if (stepIdx >= steps.length) {
+        clearInterval(interval);
+        onTakeUpdated(takeId, {
+          status: "rendered",
+          thumbUrl: `https://picsum.photos/seed/${Math.random().toString(36).slice(3,9)}/1024/576`,
+          fullImageUrl: `https://picsum.photos/seed/${Math.random().toString(36).slice(3,9)}/1024/576`,
+        });
+        return;
+      }
+      
+      progress = steps[stepIdx];
+      onTakeUpdated(takeId, { 
+        progress,
+        status: "rendering" as const
+      });
+      stepIdx++;
+    }, 800); // ~3.2s total
+  }
+        }
+      }
+    }
+
+    // Convert Aspect Ratio to WxH
+    let imageSize = "1024x576"; // default 16:9
+    if (settings.aspectRatio === "21:9") imageSize = "1280x512";
+    if (settings.aspectRatio === "1:1") imageSize = "1024x1024";
+    if (settings.aspectRatio === "9:16") imageSize = "576x1024";
+
+    const seed = Math.floor(Math.random() * 999999999);
+
+    const initialTake: Omit<Take, "id" | "shotId"> = {
+      seed,
+      status: "rendering",
+      rating: 0,
+      createdAt: Date.now(),
+      metadata: {
+        model: settings.model,
+        prompt: finalPrompt,
+        negativePrompt: settings.negativePrompt,
+        cfgScale: settings.cfgScale,
+        steps: settings.steps,
+        aspectRatio: settings.aspectRatio,
+        initImageUrl
       }
     };
 
@@ -49,6 +192,7 @@ export class GenerationAPI {
     // If no API key, simulate success after 3 seconds
     if (!apiKey) {
       console.log("No API key provided. Simulating generation...\nPrompt:", finalPrompt);
+      if (initImageUrl) console.log("Using Init Image:", initImageUrl);
       setTimeout(() => {
         onTakeUpdated(id, {
           status: "rendered",
@@ -61,22 +205,29 @@ export class GenerationAPI {
 
     // Call actual SiliconFlow API
     try {
+      const payload: any = {
+        model: settings.model,
+        prompt: finalPrompt,
+        negative_prompt: settings.negativePrompt,
+        image_size: imageSize,
+        batch_size: 1,
+        seed: seed,
+        num_inference_steps: settings.steps,
+        guidance_scale: settings.cfgScale
+      };
+
+      if (initImageUrl) {
+        payload.image_url = initImageUrl;
+        payload.strength = 0.35; 
+      }
+
       const response = await fetch(`${SILICON_FLOW_URL}/images/generations`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${apiKey}`
         },
-        body: JSON.stringify({
-          model: settings.model,
-          prompt: finalPrompt,
-          negative_prompt: settings.negativePrompt,
-          image_size: imageSize,
-          batch_size: 1,
-          seed: seed,
-          num_inference_steps: settings.steps,
-          guidance_scale: settings.cfgScale
-        })
+        body: JSON.stringify(payload)
       });
 
       if (!response.ok) {

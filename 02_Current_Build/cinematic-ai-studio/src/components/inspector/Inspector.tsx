@@ -17,7 +17,9 @@ import {
   Settings2,
   Maximize2,
   Play,
-  Loader2
+  Loader2,
+  Timer,
+  Link2
 } from "lucide-react";
 
 export function Inspector() {
@@ -148,6 +150,35 @@ export function Inspector() {
           <h3 className="text-[9px] mono uppercase tracking-widest text-zinc-600 font-bold border-b border-line pb-1 flex items-center gap-1">
             <Settings2 size={10} /> Generation Settings
           </h3>
+
+          <div className="grid grid-cols-2 gap-3 mb-2">
+             <div className="space-y-1">
+               <label className="text-[8px] mono uppercase text-zinc-500 flex items-center gap-1">
+                 <Timer size={8} /> Duration
+               </label>
+               <div className="flex items-center gap-2">
+                 <input 
+                   type="number" step="0.5"
+                   value={shot.duration || 3.0}
+                   onChange={(e) => handleUpdate({ duration: parseFloat(e.target.value) })}
+                   className="nle-input text-[10px] py-1 w-16"
+                 />
+                 <span className="text-[8px] mono text-zinc-600">SEC</span>
+               </div>
+             </div>
+             <div className="space-y-1">
+               <label className="text-[8px] mono uppercase text-zinc-500 flex items-center gap-1">
+                 <Link2 size={8} /> Continuity
+               </label>
+               <button 
+                 onClick={() => handleUpdate({ usePreviousFrameAsInit: !shot.usePreviousFrameAsInit })}
+                 className={`w-full py-1 border rounded text-[8px] mono uppercase transition-all ${shot.usePreviousFrameAsInit ? 'bg-accent/10 border-accent text-accent' : 'bg-ink-800 border-line text-zinc-600'}`}
+               >
+                 {shot.usePreviousFrameAsInit ? 'CHAIN: ON' : 'CHAIN: OFF'}
+               </button>
+             </div>
+          </div>
+          
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
               <label className="text-[8px] mono uppercase text-zinc-500">Model</label>
