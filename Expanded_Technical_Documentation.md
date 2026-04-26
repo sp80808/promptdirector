@@ -114,8 +114,8 @@ Located in `src/utils/orchestrator.ts`, this module translates high-level direct
 - **Batch Processing Pipeline**: Parallel shot processing with priority queuing
 - **Usage Analytics Dashboard**: Usage pattern analysis for workflow optimization
 
-## 8. Brainstorming Session Output
-Based on user feedback, market trends, and technical feasibility analysis, the following innovative concepts have been prioritized:
+## 8. Brainstorming & Automation Blueprint
+For a detailed technical breakdown of upcoming intelligent studio features, refer to the **[AUTOMATION_BLUEPRINT.md](./AUTOMATION_BLUEPRINT.md)**.
 
 1. **AI Director Assistant**: Context-aware suggestions during shot composition
 2. **Style Transfer Studio**: Apply specific cinematographers' styles to generated footage

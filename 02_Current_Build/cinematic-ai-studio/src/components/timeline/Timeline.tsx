@@ -3,7 +3,7 @@ import { Scene, Shot } from "../../types";
 import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
 import { Clapperboard, Plus, Video, Trash2, GripVertical, PlayCircle, Sparkles, Wand2 } from "lucide-react";
 import { IconSparkle } from "../shared/Icons";
-import { getShotSuggestionsForTimeline, applyTopSuggestion } from "../../utils/automation/engine";
+import { getShotSuggestionsForTimeline, applyTopSuggestion, runAutomationForShot } from "../../utils/automation/engine";
 import React from "react";
 
 export function Timeline() {
@@ -14,8 +14,6 @@ export function Timeline() {
     if (!selectedShotId || !automationConfig.shotSuggester?.enabled) return;
     
     const timer = setTimeout(async () => {
-      // Trigger automation for this shot
-      const { runAutomationForShot } = await import('../../utils/automation/engine');
       await runAutomationForShot(selectedShotId);
     }, 500);
     
