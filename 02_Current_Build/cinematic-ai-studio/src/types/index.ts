@@ -139,6 +139,7 @@ export type Modal =
   | { kind: "prop"; id?: string }
   | { kind: "media_viewer"; takeId: string; shotId: string }
   | { kind: "script_breakdown" }
+  | { kind: "player" }
   | { kind: "export" };
 
 export interface CinematicState {

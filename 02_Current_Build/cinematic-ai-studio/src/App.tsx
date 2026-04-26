@@ -9,7 +9,8 @@ import {
   Layers, 
   Search,
   Plus,
-  Box
+  Box,
+  Download
 } from 'lucide-react';
 import { Timeline } from './components/timeline/Timeline';
 import { CharacterForge } from './components/views/CharacterForge';
@@ -17,13 +18,35 @@ import { LocationScout } from './components/views/LocationScout';
 import { PropRoom } from './components/views/PropRoom';
 import { Inspector } from './components/inspector/Inspector';
 import { ScriptBreakdownModal } from './components/modals/ScriptBreakdownModal';
+import { ExportModal } from './components/modals/ExportModal';
 import { MediaViewer } from './components/modals/MediaViewer';
+import { VideoPlayer } from './components/modals/VideoPlayer';
+import { Moodboard } from './components/views/Moodboard';
 
-type View = 'project' | 'characters' | 'locations' | 'props';
+type View = 'project' | 'characters' | 'concepts' | 'locations' | 'props';
 
 export default function App() {
   const { modal, setModal, apiKeys, setApiKey } = useStore();
   const [currentView, setCurrentView] = useState<View>('project');
+
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ignore if typing in an input
+      if (document.activeElement?.tagName === 'INPUT' || document.activeElement?.tagName === 'TEXTAREA') return;
+
+      const key = e.key.toLowerCase();
+      
+      // J: Rewind (placeholder for now)
+      if (key === 'j') console.log('Rewind');
+      // K: Play/Pause (placeholder)
+      if (key === 'k') console.log('Toggle Playback');
+      // L: Fast Forward (placeholder)
+      if (key === 'l') console.log('Fast Forward');
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   return (
     <div className="h-screen flex flex-col bg-ink-950">
@@ -43,6 +66,12 @@ export default function App() {
             <Play className="w-3 h-3 text-lime-400 fill-lime-400" />
             <span className="text-[10px] mono text-lime-400">00:00:00:00</span>
           </div>
+          <button 
+            onClick={() => setModal({ kind: 'export' })}
+            className="nle-button py-1 px-3 flex items-center gap-2 border-accent/20 text-accent hover:bg-accent/10"
+          >
+            <Download size={12} /> EXPORT
+          </button>
           <button 
             onClick={() => setModal({ kind: 'settings' })}
             className="p-2 hover:bg-ink-800 rounded transition-colors"
@@ -70,6 +99,12 @@ export default function App() {
           />
           <NavIcon 
             icon={<MapIcon />} 
+            label="Concepts" 
+            active={currentView === 'concepts'} 
+            onClick={() => setCurrentView('concepts')} 
+          />
+          <NavIcon 
+            icon={<Search />} 
             label="Locations" 
             active={currentView === 'locations'} 
             onClick={() => setCurrentView('locations')} 
@@ -89,6 +124,7 @@ export default function App() {
         <main className="flex-1 flex flex-col overflow-hidden relative bg-ink-950">
           {currentView === 'project' && <Timeline />}
           {currentView === 'characters' && <CharacterForge />}
+          {currentView === 'concepts' && <Moodboard />}
           {currentView === 'locations' && <LocationScout />}
           {currentView === 'props' && <PropRoom />}
         </main>
@@ -151,6 +187,9 @@ export default function App() {
       {modal?.kind === 'media_viewer' && (
         <MediaViewer shotId={modal.shotId} takeId={modal.takeId} />
       )}
+
+      {modal?.kind === 'script_breakdown' && <ScriptBreakdownModal />}
+      {modal?.kind === 'export' && <ExportModal />}
     </div>
   );
 }

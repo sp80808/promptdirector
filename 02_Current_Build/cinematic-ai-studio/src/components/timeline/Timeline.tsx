@@ -80,8 +80,21 @@ export function Timeline() {
                               className={`w-64 h-40 shrink-0 nle-panel flex flex-col relative group transition-all ${snapshot.isDragging ? 'rotate-2 scale-105 shadow-2xl z-50' : ''} ${selectedShotId === shot.id ? 'border-accent shadow-[0_0_10px_rgba(255,107,61,0.2)]' : 'hover:border-zinc-500'}`}
                             >
                               <div className="flex-1 bg-ink-950 flex flex-col items-center justify-center relative overflow-hidden">
-                                {shot.approvedTakeId ? (
-                                  <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(/mock-thumb.jpg)` }} />
+                                {shot.approvedTakeId && shot.takes.find(t => t.id === shot.approvedTakeId) ? (
+                                  (() => {
+                                    const approvedTake = shot.takes.find(t => t.id === shot.approvedTakeId)!;
+                                    if (approvedTake.videoUrl) {
+                                      return (
+                                        <>
+                                          <video src={approvedTake.videoUrl} className="w-full h-full object-cover" muted loop autoPlay />
+                                          <div className="absolute inset-0 bg-black/20" />
+                                        </>
+                                      );
+                                    }
+                                    return (
+                                      <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${approvedTake.thumbUrl || approvedTake.fullImageUrl})` }} />
+                                    );
+                                  })()
                                 ) : (
                                   <>
                                     <Video size={32} className="text-zinc-800 mb-2" />
