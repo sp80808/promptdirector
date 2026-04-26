@@ -18,7 +18,7 @@ const defaultAutomationConfig: AutomationConfig = {
   autoApproval: { enabled: false, minScore: 8.5 },
   continuityCheck: { enabled: true, severityThreshold: "warning" },
   shotSuggester: { enabled: true },
-  takeCurator: { enabled: true, minAutoScore: 8.5 },
+  takeCurator: { enabled: true },
 };
 
 export const useStore = create<CinematicState>()(
@@ -314,8 +314,8 @@ export const useStore = create<CinematicState>()(
         return items.map(i => i.id);
       },
 
-      // Continuity System
-      addContinuityIssue: (shotId, issue) => set((s) => {
+      // Continuity
+      addContinuityIssue: (shotId: string, issue: Omit<ContinuityIssue, "id">) => set((s) => {
         const newIssue = { ...issue, id: uid(), shotId };
         return {
           shots: {
@@ -328,9 +328,8 @@ export const useStore = create<CinematicState>()(
         };
       }),
 
-      clearContinuityIssues: (shotId) => set((s) => {
+      clearContinuityIssues: (shotId?: string) => set((s) => {
         if (!shotId) {
-          // Clear all issues across all shots
           const clearedShots: typeof s.shots = {};
           Object.keys(s.shots).forEach(id => {
             clearedShots[id] = { ...s.shots[id], continuityIssues: [] };
@@ -343,10 +342,23 @@ export const useStore = create<CinematicState>()(
             [shotId]: { ...s.shots[shotId], continuityIssues: [] }
           }
         };
+      }),
+
+      importSequence: (data: any) => set((state) => {
+        if (!data || !data.scenes || !data.shots) return state;
+        return {
+          ...state,
+          scenes: data.scenes,
+          shots: data.shots,
+          characters: data.characters || [],
+          locations: data.locations || [],
+          props: data.props || []
+        };
       })
-    }),
-    {
+      }),
+      {
       name: "cinematic-v5-storage",
+      }
       partialize: (state) => ({
         apiKeys: state.apiKeys,
         characters: state.characters,

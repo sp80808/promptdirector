@@ -489,11 +489,20 @@ export function Inspector() {
           </div>
         </section>
 
-        {/* Takes Gallery */}
-        <section className="space-y-3 pt-2">
-          <div className="flex items-center justify-between border-b border-line pb-1">
-            <h3 className="text-[9px] mono uppercase tracking-widest text-zinc-600 font-bold">Takes ({shot.takes.length})</h3>
-          </div>
+         {/* Takes Gallery */}
+         <section className="space-y-3 pt-2">
+           <div className="flex items-center justify-between border-b border-line pb-1">
+             <div className="flex items-center gap-2">
+               <h3 className="text-[9px] mono uppercase tracking-widest text-zinc-600 font-bold">
+                 Takes ({shot.takes.length})
+               </h3>
+               {automationConfig.autoApproval.enabled && (
+                 <span className="text-[7px] mono text-lime-500 bg-lime-500/10 px-1.5 py-0.5 rounded border border-lime-500/30">
+                   AUTO-APPROVE ≥{automationConfig.autoApproval.minScore}
+                 </span>
+               )}
+             </div>
+           </div>
           
           <div className="grid grid-cols-2 gap-2">
             {shot.takes.map(take => {

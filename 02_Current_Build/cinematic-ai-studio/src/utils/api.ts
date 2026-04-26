@@ -105,7 +105,16 @@ export class GenerationAPI {
           }).join(", ");
           
           auditTake(googleKey, imageUrl, finalPrompt, charDetails)
-            .then(analysis => onTakeUpdated(takeId, { vlmAnalysis: analysis }))
+            .then(analysis => {
+              onTakeUpdated(takeId, { vlmAnalysis: analysis });
+              
+              // Auto-Approval Logic
+              const config = state.automationConfig?.autoApproval;
+              if (config?.enabled && analysis.consistencyScore >= (config.minScore * 10)) {
+                console.log(`[VLM Audit] Score ${analysis.consistencyScore}% meets threshold. Auto-approving take ${takeId}.`);
+                state.approveTake(shot.id, takeId);
+              }
+            })
             .catch(e => console.error("Audit background error:", e));
         }
       } else {

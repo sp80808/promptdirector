@@ -116,7 +116,7 @@ export type AutomationConfig = {
   autoApproval: { enabled: boolean; minScore: number };
   continuityCheck: { enabled: boolean; severityThreshold: "warning" | "error" };
   shotSuggester: { enabled: boolean };
-  takeCurator: { enabled: boolean; minAutoScore: number };
+  takeCurator: { enabled: boolean }; // quality scoring (auto-approval uses autoApproval.minScore)
 };
 
 export type TransitionType = "cut" | "fade" | "dissolve" | "wipe" | "match_cut" | "cut_on_action";
