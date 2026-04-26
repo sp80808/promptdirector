@@ -4,6 +4,7 @@ import { Shot, Character, Location, ShotSettings } from "../../types";
 import MentionTextarea from "../shared/MentionTextarea";
 import { GenerationAPI } from "../../utils/api";
 import { generateSmartCoverage } from "../../services/ai";
+import { ContinuityPanel } from "./ContinuityPanel";
 import { 
   CheckCircle2, 
   Clock, 
@@ -197,6 +198,11 @@ export function Inspector() {
               />
             </div>
           </div>
+        </section>
+
+        {/* Continuity System */}
+        <section className="pt-2">
+          <ContinuityPanel shot={shot} />
         </section>
 
         {/* Entity Bindings */}
