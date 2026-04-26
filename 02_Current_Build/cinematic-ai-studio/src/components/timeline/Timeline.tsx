@@ -7,7 +7,20 @@ import { getShotSuggestionsForTimeline, applyTopSuggestion } from "../../utils/a
 import React from "react";
 
 export function Timeline() {
-  const { scenes, shots, moveShot, addShot, addScene, selectShot, selectedShotId, batchAddToRenderQueue, automationSuggestions } = useStore();
+  const { scenes, shots, moveShot, addShot, addScene, selectShot, selectedShotId, batchAddToRenderQueue, applySuggestion, automationConfig } = useStore();
+  
+  // Auto-run shot suggester when shot is selected (debounced)
+  React.useEffect(() => {
+    if (!selectedShotId || !automationConfig.shotSuggester?.enabled) return;
+    
+    const timer = setTimeout(async () => {
+      // Trigger automation for this shot
+      const { runAutomationForShot } = await import('../../utils/automation/engine');
+      await runAutomationForShot(selectedShotId);
+    }, 500);
+    
+    return () => clearTimeout(timer);
+  }, [selectedShotId, automationConfig.shotSuggester?.enabled]);
 
   const onDragEnd = (result: DropResult) => {
     const { source, destination, draggableId } = result;
@@ -149,15 +162,22 @@ export function Timeline() {
                                      <GripVertical size={14} className="text-zinc-500 cursor-grab" />
                                    </div>
                                  </div>
-                                 <div className="h-10 bg-ink-900 border-t border-line px-3 flex items-center justify-between">
-                                   <span className="text-[10px] font-bold text-zinc-400 truncate pr-2">{shot.title}</span>
-                                   <div className="flex items-center gap-2">
-                                     <span className="text-[9px] mono text-zinc-600">00:04</span>
-                                     <button className="opacity-0 group-hover:opacity-100 transition-opacity text-zinc-600 hover:text-red-400">
-                                       <Trash2 size={12} />
-                                     </button>
-                                   </div>
-                               </div>
+                                  <div className="h-10 bg-ink-900 border-t border-line px-3 flex items-center justify-between">
+                                    <div className="flex items-center gap-2 min-w-0">
+                                      <span className="text-[10px] font-bold text-zinc-400 truncate">{shot.title}</span>
+                                      {suggestions.length > 0 && (
+                                        <span className="text-[8px] px-1 py-0.5 rounded bg-accent/20 text-accent border border-accent/30 flex items-center gap-1 shrink-0">
+                                          <Sparkles size={8} /> +{suggestions.length}
+                                        </span>
+                                      )}
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-[9px] mono text-zinc-600">00:04</span>
+                                      <button className="opacity-0 group-hover:opacity-100 transition-opacity text-zinc-600 hover:text-red-400">
+                                        <Trash2 size={12} />
+                                      </button>
+                                    </div>
+                                  </div>
                              </div>
                            )}
                          </Draggable>

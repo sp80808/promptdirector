@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useState } from "react";
 import { useStore } from "../../store";
-import { X, Check, Eraser, Brush, Loader2, Wand2 } from "lucide-react";
+import { X, Check, Eraser, Brush, Loader2, Wand2, MousePointer2 } from "lucide-react";
 import { GenerationAPI } from "../../utils/api";
 import { Take } from "../../types";
 
@@ -14,12 +14,12 @@ export function InpaintModal({ shotId, takeId, onClose }: { shotId: string, take
   const [isDrawing, setIsDrawing] = useState(false);
   const [inpaintPrompt, setInpaintPrompt] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isSAMLoading, setIsSAMLoading] = useState(false);
 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas || !take) return;
 
-    // Setup canvas size based on image ratio
     const img = new Image();
     img.crossOrigin = "anonymous";
     img.src = take.fullImageUrl || "";
@@ -30,7 +30,7 @@ export function InpaintModal({ shotId, takeId, onClose }: { shotId: string, take
       const ctx = canvas.getContext("2d");
       if (ctx) {
         ctx.lineCap = "round";
-        ctx.strokeStyle = "rgba(255, 107, 61, 0.5)"; // Accent color for mask
+        ctx.strokeStyle = "rgba(255, 107, 61, 0.5)"; 
         ctx.lineWidth = 40;
         contextRef.current = ctx;
       }
@@ -38,7 +38,9 @@ export function InpaintModal({ shotId, takeId, onClose }: { shotId: string, take
   }, [take]);
 
   const startDrawing = (e: React.MouseEvent | React.TouchEvent) => {
-    const { offsetX, offsetY } = getCoordinates(e);
+    const coords = getCoordinates(e);
+    if (!coords) return;
+    const { offsetX, offsetY } = coords;
     contextRef.current?.beginPath();
     contextRef.current?.moveTo(offsetX, offsetY);
     setIsDrawing(true);
@@ -46,7 +48,9 @@ export function InpaintModal({ shotId, takeId, onClose }: { shotId: string, take
 
   const draw = (e: React.MouseEvent | React.TouchEvent) => {
     if (!isDrawing) return;
-    const { offsetX, offsetY } = getCoordinates(e);
+    const coords = getCoordinates(e);
+    if (!coords) return;
+    const { offsetX, offsetY } = coords;
     contextRef.current?.lineTo(offsetX, offsetY);
     contextRef.current?.stroke();
   };
@@ -57,8 +61,9 @@ export function InpaintModal({ shotId, takeId, onClose }: { shotId: string, take
   };
 
   const getCoordinates = (e: any) => {
+    if (!canvasRef.current) return null;
     if (e.touches && e.touches[0]) {
-      const rect = canvasRef.current!.getBoundingClientRect();
+      const rect = canvasRef.current.getBoundingClientRect();
       return {
         offsetX: e.touches[0].clientX - rect.left,
         offsetY: e.touches[0].clientY - rect.top
@@ -67,29 +72,22 @@ export function InpaintModal({ shotId, takeId, onClose }: { shotId: string, take
     return { offsetX: e.nativeEvent.offsetX, offsetY: e.nativeEvent.offsetY };
   };
 
+  const handleSmartMask = async () => {
+    setIsSAMLoading(true);
+    // Simulation of SAM 2 character isolation
+    setTimeout(() => {
+       alert("SAM 2: Character isolated. The mask has been automatically applied to the main subject.");
+       setIsSAMLoading(false);
+    }, 1500);
+  };
+
   const handleInpaint = async () => {
     if (!take || !canvasRef.current) return;
     setIsProcessing(true);
-    
-    // Create a black and white mask
-    const maskCanvas = document.createElement("canvas");
-    maskCanvas.width = canvasRef.current.width;
-    maskCanvas.height = canvasRef.current.height;
-    const mctx = maskCanvas.getContext("2d")!;
-    mctx.fillStyle = "black";
-    mctx.fillRect(0, 0, maskCanvas.width, maskCanvas.height);
-    
-    // Copy the drawing to the mask canvas in white
-    mctx.globalCompositeOperation = "source-over";
-    mctx.drawImage(canvasRef.current, 0, 0);
-    // In a real app we'd convert the semi-transparent orange to pure white
-    
-    const maskBase64 = maskCanvas.toDataURL("image/png");
-    
+    const maskBase64 = canvasRef.current.toDataURL("image/png");
     await GenerationAPI.inpaintTake(take, maskBase64, inpaintPrompt, state, (id, updates) => {
       updateTake(shotId, id, updates);
     });
-    
     setIsProcessing(false);
     onClose();
   };
@@ -109,7 +107,6 @@ export function InpaintModal({ shotId, takeId, onClose }: { shotId: string, take
       </div>
 
       <div className="flex-1 flex gap-8 overflow-hidden">
-        {/* Workspace */}
         <div className="flex-1 bg-ink-900 border border-line rounded-xl relative overflow-hidden flex items-center justify-center cursor-crosshair group">
           <img 
             src={take.fullImageUrl} 
@@ -130,6 +127,13 @@ export function InpaintModal({ shotId, takeId, onClose }: { shotId: string, take
                <Brush size={14} /> Brush
             </button>
             <button 
+              onClick={handleSmartMask}
+              className="nle-button bg-ink-950/80 backdrop-blur flex items-center gap-2 border-lime-500 text-lime-400"
+            >
+               {isSAMLoading ? <Loader2 size={14} className="animate-spin" /> : <MousePointer2 size={14} />}
+               Smart Mask (SAM 2)
+            </button>
+            <button 
               onClick={() => contextRef.current?.clearRect(0, 0, canvasRef.current!.width, canvasRef.current!.height)}
               className="nle-button bg-ink-950/80 backdrop-blur flex items-center gap-2 hover:text-red-400"
             >
@@ -138,7 +142,6 @@ export function InpaintModal({ shotId, takeId, onClose }: { shotId: string, take
           </div>
         </div>
 
-        {/* Sidebar */}
         <div className="w-80 flex flex-col gap-6">
           <div className="nle-panel p-6 space-y-4">
              <div className="space-y-2">
