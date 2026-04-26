@@ -4,6 +4,7 @@ import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea
 import { Clapperboard, Plus, Video, Trash2, GripVertical, PlayCircle, Sparkles, Wand2 } from "lucide-react";
 import { IconSparkle } from "../shared/Icons";
 import { getShotSuggestionsForTimeline, applyTopSuggestion } from "../../utils/automation/engine";
+import React from "react";
 
 export function Timeline() {
   const { scenes, shots, moveShot, addShot, addScene, selectShot, selectedShotId, batchAddToRenderQueue, automationSuggestions } = useStore();
