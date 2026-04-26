@@ -12,7 +12,7 @@ export function MediaViewer({ shotId, takeId }: { shotId: string, takeId: string
 
   const [isProcessing, setIsProcessing] = useState(false);
   const [showInpaint, setShowInpaint] = useState(false);
-  const [activeTab, setActiveTab] = useState<'meta' | 'workflow'>('meta');
+  const [activeTab, setActiveTab] = useState<'meta' | 'workflow' | 'audit'>('meta');
 
   const workflowJson = useMemo(() => {
     if (!take?.metadata) return null;
@@ -116,6 +116,12 @@ export function MediaViewer({ shotId, takeId }: { shotId: string, takeId: string
                 <Info size={12} /> INFO
               </button>
               <button 
+                onClick={() => setActiveTab('audit')}
+                className={`flex-1 py-3 text-[9px] mono uppercase font-bold tracking-widest flex items-center justify-center gap-2 transition-all ${activeTab === 'audit' ? 'text-lime-400 border-b-2 border-lime-400 bg-lime-400/5' : 'text-zinc-500 hover:text-white hover:bg-white/5'}`}
+              >
+                <Sparkles size={12} /> AUDIT
+              </button>
+              <button 
                 onClick={() => setActiveTab('workflow')}
                 className={`flex-1 py-3 text-[9px] mono uppercase font-bold tracking-widest flex items-center justify-center gap-2 transition-all ${activeTab === 'workflow' ? 'text-cyan-400 border-b-2 border-cyan-400 bg-cyan-400/5' : 'text-zinc-500 hover:text-white hover:bg-white/5'}`}
               >
@@ -154,6 +160,41 @@ export function MediaViewer({ shotId, takeId }: { shotId: string, takeId: string
                  </div>
                ) : (
                  <div className="p-4 text-center text-zinc-600 mono text-[10px] mt-10">No metadata available</div>
+               )
+             ) : activeTab === 'audit' ? (
+               take.vlmAnalysis ? (
+                 <div className="p-4 space-y-6">
+                    <div className="space-y-3">
+                       <div className="flex items-center justify-between">
+                         <span className="text-[10px] mono text-zinc-500 uppercase">Consistency</span>
+                         <span className={`text-[10px] mono font-bold ${take.vlmAnalysis.consistencyScore > 80 ? 'text-lime-400' : 'text-orange-400'}`}>{take.vlmAnalysis.consistencyScore}%</span>
+                       </div>
+                       <div className="h-1 bg-ink-950 rounded-full overflow-hidden">
+                         <div className="h-full bg-lime-400" style={{ width: `${take.vlmAnalysis.consistencyScore}%` }} />
+                       </div>
+                    </div>
+
+                    <div className="space-y-2">
+                       <label className="text-[9px] mono uppercase text-zinc-500 font-bold">VLM Description</label>
+                       <p className="text-[10px] text-zinc-300 leading-relaxed bg-ink-950 p-3 rounded border border-line">{take.vlmAnalysis.description}</p>
+                    </div>
+
+                    <div className="space-y-2">
+                       <label className="text-[9px] mono uppercase text-zinc-500 font-bold">Director Feedback</label>
+                       <p className="text-[10px] text-orange-200/80 italic bg-orange-400/5 p-3 rounded border border-orange-400/10">" {take.vlmAnalysis.feedback} "</p>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2">
+                       {take.vlmAnalysis.tags.map(tag => (
+                         <span key={tag} className="text-[8px] mono px-2 py-0.5 bg-ink-950 border border-line rounded-full text-zinc-400">#{tag}</span>
+                       ))}
+                    </div>
+                 </div>
+               ) : (
+                 <div className="p-8 text-center space-y-4">
+                    <Loader2 size={32} className="mx-auto text-zinc-700 animate-spin" />
+                    <p className="text-[10px] mono text-zinc-600 uppercase tracking-widest">Running VLM Audit...</p>
+                 </div>
                )
              ) : (
                <div className="p-4 space-y-4">

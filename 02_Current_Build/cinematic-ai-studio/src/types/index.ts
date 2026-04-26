@@ -60,6 +60,13 @@ export type Take = {
   rating: number;
   createdAt: number;
   duration?: number;
+  vlmAnalysis?: {
+    description: string;
+    consistencyScore: number; // 0-100
+    qualityRating: number;    // 1-5
+    tags: string[];
+    feedback: string;
+  };
   metadata?: {
     model: string;
     prompt: string;

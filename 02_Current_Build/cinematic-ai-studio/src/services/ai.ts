@@ -109,3 +109,51 @@ ${scriptText}
     };
   }
 }
+
+export async function auditTake(
+  apiKey: string, 
+  imageUrl: string, 
+  prompt: string,
+  characterDetails: string
+): Promise<{ description: string; consistencyScore: number; qualityRating: number; tags: string[]; feedback: string }> {
+  try {
+    const ai = new GoogleGenAI({ apiKey });
+    const model = ai.models.get('gemini-2.0-flash');
+
+    const auditPrompt = `You are a professional Film Quality Auditor.
+Analyze the following generated film frame (linked: ${imageUrl}) based on the original prompt: "${prompt}".
+Also consider these character details for consistency: "${characterDetails}".
+
+Provide an audit in JSON format:
+{
+  "description": "What is actually visible in the frame?",
+  "consistencyScore": (0-100, how well it matches characters and prompt),
+  "qualityRating": (1-5),
+  "tags": ["lighting type", "shot type", "detected mood"],
+  "feedback": "Specific advice to improve the prompt if needed."
+}
+
+Format output as JSON ONLY.
+`;
+
+    const result = await ai.models.generateContent({
+      model: 'gemini-2.0-flash',
+      contents: auditPrompt,
+    });
+    
+    const text = result.text();
+    let jsonStr = text;
+    if (text.includes('```json')) jsonStr = text.match(/```json\s*([\s\S]*?)\s*```/)?.[1] || text;
+    
+    return JSON.parse(jsonStr);
+  } catch (error) {
+    console.error("VLM Audit Error:", error);
+    return {
+      description: "Visual analysis unavailable.",
+      consistencyScore: 0,
+      qualityRating: 0,
+      tags: [],
+      feedback: "Check API connection for vision analysis."
+    };
+  }
+}

@@ -8,71 +8,55 @@ A high-end, NLE-style web application for professional AI filmmaking. It bridges
 ### Core Tech Stack
 - **Framework**: React 19 + Vite + TypeScript
 - **State**: Zustand (with Persistence)
-- **Styling**: Tailwind CSS (Dark Mode, DaVinci-inspired palette)
+- **Styling**: Tailwind CSS 4 (Dark Mode, DaVinci-inspired palette)
 - **Drag & Drop**: `@hello-pangea/dnd`
 - **Icons**: Lucide React
 - **AI Integration**: Google Generative AI (Orchestration) + SiliconFlow/Runway/Seedance (Generation)
 
 ### Data Model (`store.ts`)
 - **Library**:
-  - `Character`: `MasterID`, `DisplayName`, `Traits`, `Seed`, `ReferenceImages[]`, `Outfits[]`
+  - `Character`: `MasterID`, `DisplayName`, `Traits`, `Seed`, `ReferenceImages[]`, `Outfits[]`, `BaseLoRA`
   - `Outfit`: `ID`, `Name`, `ClothingDesc`, `ReferenceImages[]`
   - `Location`: `ID`, `Name`, `Description`, `TimeOfDay`, `LightingMood`, `ReferenceImages[]`
   - `Prop`: `ID`, `Name`, `Description`, `ReferenceImages[]`
 - **Sequence**:
   - `Project` -> `Scene[]` -> `Shot[]`
-  - `Shot`: `ID`, `Characters[]`, `LocationID`, `Prompt`, `Optics`, `Motion`, `Takes[]`, `ApprovedTakeID`
-  - `Take`: `ID`, `VideoURL`, `ThumbURL`, `Seed`, `Status` (queued/rendered/failed)
+  - `Shot`: `ID`, `Characters[]`, `LocationID`, `Prompt`, `Optics`, `Motion`, `Duration`, `InitImageChain`, `Takes[]`
+  - `Take`: `ID`, `VideoURL`, `AudioURL`, `ThumbURL`, `Seed`, `WorkflowJSON`, `Status`
 
 ## 2. Key Features
 
-### A. The "Character Bible" & Modular Outfits
+### A. The "Character Bible" & Modular Outfits [DONE]
 - **Master Identity**: Lock the face seed and core traits.
-- **Outfit Variants**: Create "Civilian", "Space Suit", "Battle Damaged" variants that preserve the Master's facial identity.
-- **Ingredient Reference**: Pass multiple reference images to APIs (like FLUX.2) for zero-morph consistency.
+- **Outfit Variants**: Create variants that preserve identity while changing wardrobe.
+- **Auto-Extraction**: Inferred from script breakdown via Gemini.
 
-### B. Smart "@" Tagging & Prompt Orchestration
-- **Mention System**: Type `@Sarah` to inject her full character sheet into the generation payload.
-- **Auto-Translation**: The Orchestrator converts high-level directorial terms (e.g., "35mm anamorphic, slow dolly-in") into precise technical prompts for the target model.
+### B. Smart "@" Tagging & Prompt Orchestration [DONE]
+- **Mention System**: Type `@Sarah` to inject full character context.
+- **Auto-Translation**: Converts directorial terms into technical tokens.
 
-### C. NLE-Style Timeline
-- **Non-Linear Editing**: Drag and drop shots to reorder.
-- **Multi-Take Workflow**: Render multiple versions of a shot, rate them, and "Approve" the best one.
-- **Frame Chaining**: Use the last frame of an approved Take as the `init_image` for the next shot.
+### C. NLE-Style Timeline & Batching [DONE]
+- **Sequencer**: Drag-and-drop shot reordering.
+- **Batch Render**: "Render Scene" button pushes all shots to the background queue.
+- **Frame Chaining**: Previous shot's frame acts as `init_image` for the next.
 
-### D. BYOK AI Engine
-- **Provider System**: Plug in API keys for SiliconFlow (Hunyuan/Wan2.2), Google (Gemini/Veo), Runway, and custom endpoints.
+### D. Audio Stage & Foley Engine [DONE]
+- **Ambient Beds**: Prompt-based sound generation per shot.
+- **Cinema Player**: Synchronized audio/video playback of the entire cut.
 
-## 3. Implementation Plan
+### E. AI Inpaint Studio [DONE]
+- **Native Masking**: Paint masks over takes to perform surgical AI edits.
 
-### Phase 1: Foundation & Unified Store [COMPLETED]
-- Merge `store.ts` from prototypes.
-- Implement the `Character` -> `Outfit` relationship.
-- Setup the basic NLE layout (SideNav, Main Canvas, Right Inspector).
+## 3. Implementation Status
 
-### Phase 2: The Character Forge & Library [COMPLETED]
-- Build the "Character Forge" for creating Master identities and Outfit variants.
-- Implement the "Location Scout" and "Prop Room".
-- **Added**: "Concept Engine" (Moodboard).
-
-### Phase 3: The Sequencer & Smart Input [COMPLETED]
-- Implement the Timeline with drag-and-drop (`@hello-pangea/dnd`).
-- Integrate the `MentionTextarea` for shot-level prompting.
-- Build the "Orchestrator" utility for prompt construction.
-- **Added**: "Auto-Storyboard" (Script Breakdown).
-
-### Phase 4: AI Integration & Continuity [IN PROGRESS]
-- **Detailed Specification**: See **[PHASE_4_PLAN.md](./PHASE_4_PLAN.md)**.
-- Implement the BYOK Settings panel. [COMPLETED]
-- Build the "Generation Task Queue".
-- Add "Frame Chaining" logic (Approved Take -> Init Image).
-- **Added**: ".OTIO" Professional Export. [COMPLETED]
-
-### Phase 5: Polish & Advanced Features [IN PROGRESS]
-- Add "Coverage Autocomplete" (suggesting OTS, CU, Wide shots). [COMPLETED]
-- Add "Cinematic DNA" mashup tool.
-- Visual polish (NLE-styled UI components). [COMPLETED]
-- **Added**: NLE Keyboard Shortcuts (J/K/L). [COMPLETED]
+- [x] **Phase 1: Foundation**: Zustand store and core NLE layout.
+- [x] **Phase 2: Forge & Library**: Character/Location/Prop management.
+- [x] **Phase 3: Sequencer & Smart Input**: Timeline and "@" mentioning.
+- [x] **Phase 4: AI Integration & Audio**: SiliconFlow bridge, Foley engine, Inpainting.
+- [ ] **Phase 5: Advanced Intelligence**:
+  - [ ] **VLM Auto-Audit**: Vision-Language Model rating of generated takes.
+  - [ ] **Lip-Sync Pipeline**: Automated dialogue animation.
+  - [ ] **Asset Management**: Local caching and advanced metadata tagging.
 
 ---
 
