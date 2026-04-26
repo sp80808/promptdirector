@@ -162,6 +162,45 @@ export function applyTopSuggestion(shotId: string): boolean {
 }
 
 /**
+ * Apply top suggestion for a shot (replaces prompt with suggested version)
+ */
+export function applyTopSuggestion(shotId: string): boolean {
+  const state = useStore.getState();
+  const top = state.automationSuggestions
+    .filter(s => s.shotId === shotId && !s.applied && !s.dismissed)
+    .sort((a, b) => b.confidence - a.confidence)[0];
+  
+  if (!top) return false;
+  
+  // Handle different suggestion types
+  if (top.type === 'prompt_enhancement') {
+    state.updateShot(shotId, { rawPrompt: top.suggested });
+  } else if (top.type === 'shot_suggestion') {
+    // For shot suggestions, we need to create a new shot in the next position
+    const shot = state.shots[shotId];
+    const scene = state.scenes.find(s => s.id === shot.sceneId);
+    if (scene) {
+      const suggestionData = JSON.parse(top.suggested);
+      const newShotIndex = scene.shotIds.indexOf(shotId) + 1;
+      
+      // Create new shot with suggested parameters
+      state.addShot(scene.id, {
+        title: suggestionData.title || 'New Shot',
+        characterIds: shot.characterIds, // inherit characters
+        outfitIds: shot.outfitIds,
+        locationId: shot.locationId,
+        rawPrompt: suggestionData.promptFragment,
+        optics: suggestionData.optics,
+        motion: suggestionData.motion,
+      });
+    }
+  }
+  
+  state.applySuggestion(top.id);
+  return true;
+}
+
+/**
  * Auto-apply all high-confidence suggestions for a shot (if user enabled)
  */
 export function autoApplyHighConfidence(shotId: string, threshold = 0.9): number {
@@ -170,7 +209,7 @@ export function autoApplyHighConfidence(shotId: string, threshold = 0.9): number
     s.shotId === shotId &&
     !s.applied && !s.dismissed &&
     s.confidence >= threshold &&
-    s.type === 'prompt_enhancement'
+    s.type === 'prompt_enhancement' // only auto-apply prompt enhancements
   );
   
   for (const s of targets) {
@@ -179,4 +218,14 @@ export function autoApplyHighConfidence(shotId: string, threshold = 0.9): number
   }
   
   return targets.length;
+}
+
+/**
+ * Get actionable suggestions for timeline display (shot_suggestion type only)
+ */
+export function getShotSuggestionsForTimeline(shotId: string) {
+  const state = useStore.getState();
+  return state.automationSuggestions
+    .filter(s => s.shotId === shotId && !s.applied && !s.dismissed && s.type === 'shot_suggestion')
+    .sort((a, b) => b.confidence - a.confidence);
 }

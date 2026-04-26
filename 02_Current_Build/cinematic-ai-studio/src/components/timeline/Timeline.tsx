@@ -1,12 +1,12 @@
 import { useStore } from "../../store";
 import { Scene, Shot } from "../../types";
 import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
-import { Clapperboard, Plus, Video, Trash2, GripVertical, PlayCircle, Sparkles } from "lucide-react";
+import { Clapperboard, Plus, Video, Trash2, GripVertical, PlayCircle, Sparkles, Wand2 } from "lucide-react";
 import { IconSparkle } from "../shared/Icons";
-import { AutoDirector } from "../../utils/automation/director";
+import { getShotSuggestionsForTimeline, applyTopSuggestion } from "../../utils/automation/engine";
 
 export function Timeline() {
-  const { scenes, shots, moveShot, addShot, addScene, selectShot, selectedShotId, batchAddToRenderQueue } = useStore();
+  const { scenes, shots, moveShot, addShot, addScene, selectShot, selectedShotId, batchAddToRenderQueue, automationSuggestions } = useStore();
 
   const onDragEnd = (result: DropResult) => {
     const { source, destination, draggableId } = result;
@@ -98,67 +98,115 @@ export function Timeline() {
                 </div>
               </div>
 
-              <Droppable droppableId={scene.id} direction="horizontal">
-                {(provided) => (
-                  <div 
-                    {...provided.droppableProps}
-                    ref={provided.innerRef}
-                    className="flex gap-3 overflow-x-auto pb-4 min-h-[160px]"
-                  >
-                    {scene.shotIds.map((shotId, index) => {
-                      const shot = shots[shotId];
-                      if (!shot) return null;
-                      return (
-                        <Draggable key={shot.id} draggableId={shot.id} index={index}>
-                          {(provided, snapshot) => (
-                            <div
-                              ref={provided.innerRef}
-                              {...provided.draggableProps}
-                              onClick={() => selectShot(shot.id)}
-                              className={`w-64 h-40 shrink-0 nle-panel flex flex-col relative group transition-all ${snapshot.isDragging ? 'rotate-2 scale-105 shadow-2xl z-50' : ''} ${selectedShotId === shot.id ? 'border-accent shadow-[0_0_10px_rgba(255,107,61,0.2)]' : 'hover:border-zinc-500'}`}
-                            >
-                              <div className="flex-1 bg-ink-950 flex flex-col items-center justify-center relative overflow-hidden">
-                                {shot.approvedTakeId && shot.takes.find(t => t.id === shot.approvedTakeId) ? (
-                                  (() => {
-                                    const approvedTake = shot.takes.find(t => t.id === shot.approvedTakeId)!;
-                                    if (approvedTake.videoUrl) {
-                                      return (
-                                        <>
-                                          <video src={approvedTake.videoUrl} className="w-full h-full object-cover" muted loop autoPlay />
-                                          <div className="absolute inset-0 bg-black/20" />
-                                        </>
-                                      );
-                                    }
-                                    return (
-                                      <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${approvedTake.thumbUrl || approvedTake.fullImageUrl})` }} />
-                                    );
-                                  })()
-                                ) : (
-                                  <>
-                                    <Video size={32} className="text-zinc-800 mb-2" />
-                                    <span className="text-[9px] mono text-zinc-700 uppercase">No Takes</span>
-                                  </>
-                                )}
-                                <div {...provided.dragHandleProps} className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                  <GripVertical size={14} className="text-zinc-500 cursor-grab" />
-                                </div>
-                              </div>
-                              <div className="h-10 bg-ink-900 border-t border-line px-3 flex items-center justify-between">
-                                <span className="text-[10px] font-bold text-zinc-400 truncate pr-2">{shot.title}</span>
-                                <div className="flex items-center gap-2">
-                                  <span className="text-[9px] mono text-zinc-600">00:04</span>
-                                  <button className="opacity-0 group-hover:opacity-100 transition-opacity text-zinc-600 hover:text-red-400">
-                                    <Trash2 size={12} />
-                                  </button>
-                                </div>
-                              </div>
-                            </div>
-                          )}
-                        </Draggable>
-                      );
-                    })}
-                    {provided.placeholder}
-                    {scene.shotIds.length === 0 && (
+               <Droppable droppableId={scene.id} direction="horizontal">
+                 {(provided) => (
+                   <div 
+                     {...provided.droppableProps}
+                     ref={provided.innerRef}
+                     className="flex gap-3 items-start overflow-x-auto pb-4 min-h-[160px]"
+                   >
+                     {scene.shotIds.map((shotId, index) => {
+                       const shot = shots[shotId];
+                       if (!shot) return null;
+                       
+                       // Get suggestions for this shot (for inserting AFTER it)
+                       const suggestions = getShotSuggestionsForTimeline(shotId);
+                       
+                       return (
+                         <React.Fragment key={shot.id}>
+                           <Draggable key={shot.id} draggableId={shot.id} index={index}>
+                             {(provided, snapshot) => (
+                               <div
+                                 ref={provided.innerRef}
+                                 {...provided.draggableProps}
+                                 onClick={() => selectShot(shot.id)}
+                                 className={`w-64 h-40 shrink-0 nle-panel flex flex-col relative group transition-all ${snapshot.isDragging ? 'rotate-2 scale-105 shadow-2xl z-50' : ''} ${selectedShotId === shot.id ? 'border-accent shadow-[0_0_10px_rgba(255,107,61,0.2)]' : 'hover:border-zinc-500'}`}
+                               >
+                                 <div className="flex-1 bg-ink-950 flex flex-col items-center justify-center relative overflow-hidden">
+                                   {shot.approvedTakeId && shot.takes.find(t => t.id === shot.approvedTakeId) ? (
+                                     (() => {
+                                       const approvedTake = shot.takes.find(t => t.id === shot.approvedTakeId)!;
+                                       if (approvedTake.videoUrl) {
+                                         return (
+                                           <>
+                                             <video src={approvedTake.videoUrl} className="w-full h-full object-cover" muted loop autoPlay />
+                                             <div className="absolute inset-0 bg-black/20" />
+                                           </>
+                                         );
+                                       }
+                                       return (
+                                         <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${approvedTake.thumbUrl || approvedTake.fullImageUrl})` }} />
+                                       );
+                                     })()
+                                   ) : (
+                                     <>
+                                       <Video size={32} className="text-zinc-800 mb-2" />
+                                       <span className="text-[9px] mono text-zinc-700 uppercase">No Takes</span>
+                                     </>
+                                   )}
+                                   <div {...provided.dragHandleProps} className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                     <GripVertical size={14} className="text-zinc-500 cursor-grab" />
+                                   </div>
+                                 </div>
+                                 <div className="h-10 bg-ink-900 border-t border-line px-3 flex items-center justify-between">
+                                   <span className="text-[10px] font-bold text-zinc-400 truncate pr-2">{shot.title}</span>
+                                   <div className="flex items-center gap-2">
+                                     <span className="text-[9px] mono text-zinc-600">00:04</span>
+                                     <button className="opacity-0 group-hover:opacity-100 transition-opacity text-zinc-600 hover:text-red-400">
+                                       <Trash2 size={12} />
+                                     </button>
+                                   </div>
+                               </div>
+                             </div>
+                           )}
+                         </Draggable>
+                         
+                         {/* Suggestion Slot - appears after shot */}
+                         {suggestions.length > 0 && (
+                           <div className="shrink-0 w-12 flex flex-col gap-1 justify-center opacity-0 group-hover:opacity-100 transition-opacity ml-1">
+                             {suggestions.slice(0, 2).map(s => {
+                               const data = JSON.parse(s.suggested);
+                               return (
+                                 <button
+                                   key={s.id}
+                                   onClick={(e) => {
+                                     e.stopPropagation();
+                                     // Apply suggestion: adds new shot at next index
+                                     const scene = scenes.find(sc => sc.id === shot.sceneId);
+                                     if (scene) {
+                                       const newIndex = scene.shotIds.indexOf(shotId) + 1;
+                                       
+                                       // Create shot with suggestion data
+                                       const newShotId = addShot(scene.id, {
+                                         title: data.title,
+                                         characterIds: shot.characterIds,
+                                         outfitIds: shot.outfitIds,
+                                         locationId: shot.locationId,
+                                         rawPrompt: data.promptFragment,
+                                         optics: data.optics,
+                                         motion: data.motion,
+                                       });
+                                       
+                                       // Mark suggestion as applied
+                                       applySuggestion(s.id);
+                                       
+                                       // Select the new shot
+                                       selectShot(newShotId);
+                                     }
+                                   }}
+                                   className="w-10 h-8 rounded bg-accent/10 border border-accent/30 text-accent hover:bg-accent/20 hover:border-accent/50 transition-all flex items-center justify-center group/pill"
+                                   title={`${data.reason || 'Add suggestion'}\n${data.shotType || ''}`}
+                                 >
+                                   <Plus size={12} className="group-hover/pill:rotate-90 transition-transform" />
+                                 </button>
+                               );
+                             })}
+                           </div>
+                         )}
+                       </React.Fragment>
+                     ))}
+                     {provided.placeholder}
+                     {scene.shotIds.length === 0 && (
                       <div className="w-full h-40 border-2 border-dashed border-line rounded-lg flex items-center justify-center opacity-30">
                         <p className="mono text-[10px] uppercase">Drop shots here or click Add Shot</p>
                       </div>

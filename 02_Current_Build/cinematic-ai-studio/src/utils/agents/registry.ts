@@ -65,10 +65,7 @@ export function initializeDefaultAgents() {
   // Register agents in priority order
   AgentRegistry.register(new PromptEnhancerAgent());
   AgentRegistry.register(new TakeCuratorAgent());
-  
-  // Future agents:
-  // AgentRegistry.register(new ShotSuggestionAgent());
-  // AgentRegistry.register(new ContinuityAgent());
+  AgentRegistry.register(new ShotSuggestionAgent());
   
   console.log(`[AgentRegistry] Initialized ${AgentRegistry.count} agent(s)`);
 }
