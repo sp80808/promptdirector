@@ -57,8 +57,15 @@ Example Output: 35mm anamorphic lens, high-contrast chiaroscuro lighting, heavy 
 }
 
 export interface ScriptBreakdownResponse {
-  characters: { name: string; traits: string }[];
-  shots: { title: string; description: string; duration: number; optics: string }[];
+  characters: { name: string; traits: string; suggestedVoice?: string }[];
+  shots: { 
+    title: string; 
+    description: string; 
+    duration: number; 
+    optics: string;
+    dialogue?: string;
+    speakerName?: string;
+  }[];
 }
 
 export async function autoBreakdownScript(apiKey: string, scriptText: string): Promise<ScriptBreakdownResponse> {
@@ -66,19 +73,21 @@ export async function autoBreakdownScript(apiKey: string, scriptText: string): P
     const ai = new GoogleGenAI({ apiKey });
     const prompt = `You are an expert film director and AI production assistant.
 Analyze the following script excerpt and provide:
-1. A list of unique CHARACTERS found, with a short description of their physical traits and age inferred from context.
+1. A list of unique CHARACTERS found, with physical traits and a suggested "voice type" (e.g. "Deep male, gravelly", "High-pitched youthful female").
 2. A sequence of distinct cinematic SHOTS. For each shot, provide:
    - title: Short descriptive title.
-   - description: A highly descriptive technical text-to-image prompt.
-   - duration: Suggested length in seconds (e.g., 2.5, 4.0, 6.0).
-   - optics: Suggested lens (e.g., "35mm anamorphic", "85mm prime").
+   - description: A technical text-to-image prompt.
+   - duration: Suggested length in seconds.
+   - optics: Suggested lens.
+   - dialogue: If the shot contains character speech, provide the EXACT dialogue text.
+   - speakerName: The name of the character speaking this dialogue.
 
-Format the output STRICTLY as a single JSON object.
+Format output as a single JSON object.
 Example:
 {
-  "characters": [{ "name": "Sarah", "traits": "Mid-30s, weary eyes, wearing a tattered flight suit." }],
+  "characters": [{ "name": "Sarah", "traits": "30s, weary", "suggestedVoice": "Calm female" }],
   "shots": [
-    { "title": "Wide Establishing", "description": "High angle wide shot of a desert planet...", "duration": 5.0, "optics": "24mm wide" }
+    { "title": "CU Sarah", "description": "Close up of Sarah...", "duration": 4.0, "optics": "50mm", "dialogue": "We have to leave.", "speakerName": "Sarah" }
   ]
 }
 

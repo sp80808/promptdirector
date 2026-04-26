@@ -271,6 +271,84 @@ export class GenerationAPI {
     }
   }
 
+  static async generateSpeech(
+    text: string,
+    voiceId: string,
+    state: CinematicState,
+    onTakeUpdated: (takeId: string, updates: Partial<Take>) => void,
+    takeId: string
+  ) {
+    const apiKey = state.apiKeys.siliconFlow;
+    onTakeUpdated(takeId, { status: "rendering" });
+
+    if (!apiKey) {
+      setTimeout(() => {
+        onTakeUpdated(takeId, {
+          speechUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3" // Mock speech
+        });
+      }, 2000);
+      return;
+    }
+
+    try {
+      const response = await fetch(`${SILICON_FLOW_URL}/audio/speech`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+          model: "fishaudio/fish-speech-1.4",
+          input: text,
+          voice: voiceId
+        })
+      });
+      const data = await response.json();
+      if (data.audio_url) onTakeUpdated(takeId, { speechUrl: data.audio_url });
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
+  static async generateLipSync(
+    take: Take,
+    audioUrl: string,
+    state: CinematicState,
+    onTakeUpdated: (takeId: string, updates: Partial<Take>) => void
+  ) {
+    const apiKey = state.apiKeys.siliconFlow;
+    onTakeUpdated(take.id, { status: "rendering" });
+
+    if (!apiKey) {
+      setTimeout(() => {
+        onTakeUpdated(take.id, {
+          status: "rendered",
+          lipSyncUrl: "https://www.w3schools.com/html/mov_bbb.mp4" // Mock lip-sync
+        });
+      }, 4000);
+      return;
+    }
+
+    try {
+      const response = await fetch(`${SILICON_FLOW_URL}/video/lipsync`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+          model: "tencent/LivePortrait",
+          source_url: take.fullImageUrl || take.videoUrl,
+          audio_url: audioUrl
+        })
+      });
+      const data = await response.json();
+      if (data.video_url) onTakeUpdated(take.id, { status: "rendered", lipSyncUrl: data.video_url });
+    } catch (err) {
+      onTakeUpdated(take.id, { status: "failed" });
+    }
+  }
+
   private static simulateProgress(takeId: string, onTakeUpdated: (takeId: string, updates: Partial<Take>) => void) {
     let progress = 0;
     const interval = setInterval(() => {

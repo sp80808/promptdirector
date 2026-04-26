@@ -190,18 +190,26 @@ export const useStore = create<CinematicState>()(
         const newChars = [...existingChars];
 
         // 1. Process New Characters
+        const nameToId: Record<string, string> = {};
+        
+        // Map existing chars
+        existingChars.forEach(c => { nameToId[c.name.toLowerCase()] = c.id; });
+
         breakdown.characters.forEach(bc => {
-          const exists = existingChars.find(c => c.name.toLowerCase() === bc.name.toLowerCase());
-          if (!exists) {
+          const lowerName = bc.name.toLowerCase();
+          if (!nameToId[lowerName]) {
+            const id = uid();
+            nameToId[lowerName] = id;
             newChars.push({
-              id: uid(),
+              id,
               name: bc.name,
               displayName: bc.name,
               traits: bc.traits,
               seed: Math.floor(Math.random() * 9999999),
               color: "#" + Math.floor(Math.random()*16777215).toString(16),
               masterReferenceImages: [],
-              outfits: []
+              outfits: [],
+              voiceId: bc.suggestedVoice
             });
           }
         });
@@ -210,16 +218,20 @@ export const useStore = create<CinematicState>()(
         breakdown.shots.forEach(ss => {
           const id = uid();
           shotIds.push(id);
+          const speakerId = ss.speakerName ? nameToId[ss.speakerName.toLowerCase()] : undefined;
+          
           newShots[id] = {
             id,
             sceneId,
             title: ss.title,
-            characterIds: [],
+            characterIds: speakerId ? [speakerId] : [],
             outfitIds: {},
             rawPrompt: ss.description,
             optics: ss.optics || "",
             motion: "",
             duration: ss.duration || 3.0,
+            dialogue: ss.dialogue,
+            speakingCharacterId: speakerId,
             takes: [],
             settings: {
               model: "black-forest-labs/FLUX.1-schnell",

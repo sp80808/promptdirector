@@ -28,6 +28,7 @@ export type Character = {
   masterReferenceImages: ReferenceImage[];
   outfits: Outfit[];
   baseLoRA?: string;
+  voiceId?: string;      // Assigned voice for TTS
 };
 
 export type Location = {
@@ -52,7 +53,9 @@ export type Take = {
   id: string;
   shotId: string;
   videoUrl?: string;
-  audioUrl?: string;
+  audioUrl?: string;      // Foley/Ambient
+  speechUrl?: string;     // TTS dialogue
+  lipSyncUrl?: string;    // Result of audio + visuals
   thumbUrl?: string;
   fullImageUrl?: string;
   seed: number;
@@ -133,6 +136,8 @@ export type Shot = {
   locked?: boolean;
   ambientSoundPrompt?: string;
   musicBedPrompt?: string;
+  dialogue?: string;         // The text to be spoken
+  speakingCharacterId?: string; // Who is speaking
 };
 
 export type Scene = {
