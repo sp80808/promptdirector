@@ -74,21 +74,40 @@ export function CharacterForge() {
 
             <section className="space-y-4">
               <h3 className="text-[10px] mono uppercase tracking-widest text-zinc-500 font-bold border-b border-line pb-2">Master Identity</h3>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="text-[10px] uppercase text-zinc-500 font-bold">Traits & Appearance</label>
-                  <textarea 
-                    value={selectedChar.traits}
-                    onChange={(e) => updateCharacter(selectedChar.id, { traits: e.target.value })}
-                    className="nle-input h-24"
-                    placeholder="Describe core physical traits..."
-                  />
+              <div className="grid grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <label className="text-[10px] uppercase text-zinc-500 font-bold">Physical Traits & LoRA</label>
+                    <textarea 
+                      value={selectedChar.traits}
+                      onChange={(e) => updateCharacter(selectedChar.id, { traits: e.target.value })}
+                      className="nle-input h-24"
+                      placeholder="Describe age, ethnicity, hair, eyes..."
+                    />
+                    <div className="flex items-center gap-2 mt-2">
+                      <span className="text-[9px] mono text-zinc-500 uppercase">Base LoRA:</span>
+                      <input 
+                        value={selectedChar.baseLoRA || ""}
+                        onChange={(e) => updateCharacter(selectedChar.id, { baseLoRA: e.target.value })}
+                        className="nle-input text-[10px] py-1 flex-1"
+                        placeholder="huggingface-id/lora-name"
+                      />
+                    </div>
+                  </div>
                 </div>
                 <div className="space-y-2">
-                  <label className="text-[10px] uppercase text-zinc-500 font-bold">Reference Ingredients</label>
+                  <label className="text-[10px] uppercase text-zinc-500 font-bold">Visual Anchors (Reference Images)</label>
                   <div className="grid grid-cols-3 gap-2">
-                    <div className="aspect-square bg-ink-900 border-2 border-dashed border-line rounded flex items-center justify-center cursor-pointer hover:border-accent/50 transition-colors">
-                      <ImageIcon className="text-zinc-700" size={24} />
+                    {selectedChar.masterReferenceImages.map(img => (
+                      <div key={img.id} className="aspect-square bg-ink-800 rounded border border-line overflow-hidden group relative">
+                        <img src={img.url} className="w-full h-full object-cover" />
+                        <button className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                          <Trash2 size={12} className="text-red-400" />
+                        </button>
+                      </div>
+                    ))}
+                    <div className="aspect-square bg-ink-900 border-2 border-dashed border-line rounded flex items-center justify-center cursor-pointer hover:border-accent/50 transition-colors text-zinc-700 hover:text-accent">
+                      <ImageIcon size={24} />
                     </div>
                   </div>
                 </div>

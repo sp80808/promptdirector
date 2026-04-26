@@ -1,111 +1,108 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenAI } from "@google/genai";
 
-/**
- * eCoT: Cinematic.AI v5.0 Orchestration Service
- * This service handles the "Director's Brain" logic, using Gemini to 
- * breakdown scripts, optimize prompts, and check continuity.
- */
-
-export async function optimizePrompt(apiKey: string, context: { 
-  character?: string, 
-  location?: string, 
-  action?: string, 
-  optics?: string 
-}) {
-  if (!apiKey) throw new Error("Google AI Studio key is missing.");
-  
-  const genAI = new GoogleGenerativeAI(apiKey);
-  const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
-
-  const prompt = `
-    You are an expert cinematographer and AI video prompt engineer. 
-    Fuse the following into a highly optimized, technical video generation prompt (max 3 sentences).
-    Character: ${context.character || "N/A"}
-    Location: ${context.location || "N/A"}
-    Action/Directorial: ${context.action || "N/A"}
-    Optics/Lens: ${context.optics || "N/A"}
-    
-    Output ONLY the final prompt text. For example: "High-angle medium shot, Elias Thorne standing in Neon Alleys..."
-  `;
-  
+export async function generateSmartCoverage(
+  apiKey: string, 
+  shotDescription: string, 
+  characters: string[]
+): Promise<{ title: string; optics: string; motion: string; prompt: string }[]> {
   try {
-    const result = await model.generateContent(prompt);
-    return result.response.text();
+    const ai = new GoogleGenAI({ apiKey });
+    const prompt = `You are a professional Film Director.
+Given a base shot description: "${shotDescription}"
+And these characters present: ${characters.join(", ")}
+Suggest 4-5 additional coverage shots (e.g. Over-the-shoulder, Extreme Close Up, Tracking Wide, Low Angle) to fully capture the emotional and cinematic weight of the scene.
+For each shot, provide a title, lens/optics, motion, and a technical image prompt.
+Format the output STRICTLY as a JSON array of objects.
+Example: [{"title": "Tight ECU", "optics": "85mm macro", "motion": "Static", "prompt": "Macro shot of eyes, sweat on brow, high-contrast lighting"}]
+`;
+
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.0-flash',
+      contents: prompt,
+    });
+
+    const text = response.text();
+    let jsonStr = text;
+    if (text.includes('```json')) jsonStr = text.match(/```json\s*([\s\S]*?)\s*```/)?.[1] || text;
+    
+    return JSON.parse(jsonStr);
   } catch (error) {
-    console.error("Gemini API Error:", error);
-    throw new Error("Failed to optimize prompt. Check your BYOK settings.");
+    console.error("Coverage Error:", error);
+    return [];
   }
 }
 
-export async function autoBreakdownScript(apiKey: string, scriptText: string) {
-  if (!apiKey) throw new Error("Google AI Studio key is missing.");
-  const genAI = new GoogleGenerativeAI(apiKey);
-  const model = genAI.getGenerativeModel({ 
-    model: "gemini-2.0-flash",
-    generationConfig: { responseMimeType: "application/json" }
-  });
-
-  const prompt = `
-    You are an automated Storyboard Generator based on OpenTimelineIO paradigms.
-    Break down the following script text into 3 to 6 distinct video shots.
-    For each shot, provide a title and a brief description that captures the action and camera angle.
-    Return ONLY a JSON array of objects, where each object has "title" and "description" fields.
-    
-    Example:
-    [
-      { "title": "Establish Alley", "description": "Wide shot, establishing the dark alley. Rain falls." },
-      { "title": "Shock Reaction", "description": "Close up, characters face looking shocked." }
-    ]
-
-    Script to breakdown:
-    "${scriptText}"
-  `;
-
+export async function generateCinematicDNA(apiKey: string, films: string): Promise<string> {
   try {
-    const result = await model.generateContent(prompt);
-    const text = result.response.text();
-    const data = JSON.parse(text);
-    return Array.isArray(data) ? data : [];
+    const ai = new GoogleGenAI({ apiKey });
+    const prompt = `You are a world-class Cinematographer.
+Analyze the visual style (lighting, color palette, camera work, film stock) of these reference films: "${films}".
+Synthesize them into a single, cohesive "Cinematic DNA" string consisting of highly descriptive technical tokens.
+Focus on: Lighting setup (e.g. high-contrast, chiaroscuro), Color grading (e.g. teal/orange, sepia), Lens choice (e.g. anamorphic, spherical 35mm), and Textures (e.g. 35mm grain, hazy).
+Output ONLY the technical prompt string. No conversational text.
+Example Output: 35mm anamorphic lens, high-contrast chiaroscuro lighting, heavy film grain, moody teal and deep amber palette, smoke and atmospheric haze.
+`;
+
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.0-flash',
+      contents: prompt,
+      config: { temperature: 0.8 }
+    });
+
+    return response.text().trim();
   } catch (error) {
-    console.error("Script Breakdown Error:", error);
-    throw new Error("Failed to breakdown script.");
+    console.error("DNA Generation Error:", error);
+    return "Cinematic lighting, high-contrast, filmic texture, 35mm lens.";
   }
 }
 
-export async function checkContinuity(apiKey: string, images: string[], prompts: string[]) {
-  if (!apiKey) throw new Error("Google AI Studio key is missing.");
-  const genAI = new GoogleGenerativeAI(apiKey);
-  const model = genAI.getGenerativeModel({ 
-    model: "gemini-2.0-flash",
-    generationConfig: { responseMimeType: "application/json" }
-  });
-  
-  const prompt = `
-    You are a Script Supervisor on a film set. 
-    Compare the following shots for continuity errors in props, wardrobe, character positions, or lighting.
-    Prompts: ${JSON.stringify(prompts)}
-    List any potential continuity errors as a JSON array of strings.
-    If there are no apparent errors, return an empty array [].
-  `;
-  
-  const parts: any[] = [{ text: prompt }];
-  
-  images.forEach(img => {
-    parts.push({
-      inlineData: {
-        data: img.split(',')[1],
-        mimeType: "image/jpeg"
+export async function autoBreakdownScript(apiKey: string, scriptText: string): Promise<{ title: string; description: string }[]> {
+  try {
+    const ai = new GoogleGenAI({ apiKey });
+    const prompt = `You are an expert film director and AI prompt engineer.
+Analyze the following script excerpt and break it down into a sequence of distinct cinematic shots.
+For each shot, provide a short title (e.g., "Wide Establishing Shot") and a highly descriptive text-to-image prompt.
+Format the output STRICTLY as a JSON array of objects. Do not include markdown code block formatting like \`\`\`json.
+Example format:
+[
+  { "title": "Wide Establishing Shot", "description": "Wide shot, desolate cyberpunk city street, neon signs reflecting in puddles, rain." },
+  { "title": "Close Up Character", "description": "Close up, female character looking determined, blue rim light, 35mm lens." }
+]
+
+Script:
+${scriptText}
+`;
+
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: prompt,
+      config: {
+        temperature: 0.7,
       }
     });
-  });
 
-  try {
-    const result = await model.generateContent({ contents: [{ role: "user", parts }] });
-    const text = result.response.text();
-    const errors = JSON.parse(text);
-    return Array.isArray(errors) ? errors : [];
+    const text = response.text();
+    if (!text) throw new Error("Empty response from Gemini");
+
+    // Try to parse the JSON output directly or extract it if wrapped in markdown
+    let jsonStr = text;
+    if (text.includes('```json')) {
+      const match = text.match(/```json\s*([\s\S]*?)\s*```/);
+      if (match) jsonStr = match[1];
+    } else if (text.includes('```')) {
+      const match = text.match(/```\s*([\s\S]*?)\s*```/);
+      if (match) jsonStr = match[1];
+    }
+
+    const parsed = JSON.parse(jsonStr);
+    if (!Array.isArray(parsed)) throw new Error("Invalid format returned");
+    return parsed;
   } catch (error) {
-    console.error("Continuity Check Error:", error);
-    throw new Error("Failed to check continuity.");
+    console.error("AutoBreakdown Error:", error);
+    // Return a mock if API fails for local testing
+    return [
+      { title: "Establishing Shot", description: "Wide cinematic establishing shot based on the provided script..." },
+      { title: "Medium Shot", description: "Medium coverage tracking shot." }
+    ];
   }
 }

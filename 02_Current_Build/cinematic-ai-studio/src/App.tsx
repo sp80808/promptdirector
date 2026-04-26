@@ -62,10 +62,13 @@ export default function App() {
         </div>
 
         <div className="flex items-center gap-4">
-          <div className="flex items-center gap-1 bg-ink-800 border border-line rounded px-2 py-1">
-            <Play className="w-3 h-3 text-lime-400 fill-lime-400" />
-            <span className="text-[10px] mono text-lime-400">00:00:00:00</span>
-          </div>
+          <button 
+            onClick={() => setModal({ kind: 'player' })}
+            className="flex items-center gap-1 bg-ink-800 border border-line hover:border-lime-500/50 rounded px-3 py-1.5 transition-colors group"
+          >
+            <Play className="w-3 h-3 text-lime-400 fill-lime-400 group-hover:scale-110 transition-transform" />
+            <span className="text-[10px] mono text-lime-400 font-bold uppercase tracking-widest ml-1">Play Cut</span>
+          </button>
           <button 
             onClick={() => setModal({ kind: 'export' })}
             className="nle-button py-1 px-3 flex items-center gap-2 border-accent/20 text-accent hover:bg-accent/10"
@@ -190,6 +193,7 @@ export default function App() {
 
       {modal?.kind === 'script_breakdown' && <ScriptBreakdownModal />}
       {modal?.kind === 'export' && <ExportModal />}
+      {modal?.kind === 'player' && <VideoPlayer />}
     </div>
   );
 }

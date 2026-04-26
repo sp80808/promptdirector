@@ -1,17 +1,20 @@
 import { useState } from "react";
 import { useStore } from "../../store";
 import { IconSparkle, IconImage } from "../shared/Icons";
-import { Loader2, Plus, Trash2 } from "lucide-react";
+import { generateCinematicDNA } from "../../services/ai";
+import { Loader2, Plus, Trash2, Dna, Wand2 } from "lucide-react";
 
 export function Moodboard() {
   const { apiKeys } = useStore();
   const [imagePrompt, setImagePrompt] = useState("");
+  const [mashupInput, setMashupInput] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isMashing, setIsMashing] = useState(false);
   const [moods, setMoods] = useState<{ id: string, url: string, prompt: string }[]>([]);
 
   const handleGenerate = async () => {
     if (!apiKeys.google) {
-      alert("Please configure Google AI Studio Key for Imagen 3 support.");
+      alert("Please configure Google AI Studio Key for Concept support.");
       return;
     }
     setIsGenerating(true);
@@ -28,6 +31,22 @@ export function Moodboard() {
     }, 2000);
   };
 
+  const handleMashup = async () => {
+    if (!apiKeys.google) {
+      alert("Configure Google AI Key for Mashup Engine.");
+      return;
+    }
+    setIsMashing(true);
+    try {
+      const dna = await generateCinematicDNA(apiKeys.google, mashupInput);
+      setImagePrompt(dna);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsMashing(false);
+    }
+  };
+
   return (
     <div className="flex flex-col h-full bg-ink-950 overflow-hidden">
       <div className="p-6 border-b border-white/5 flex items-center justify-between bg-ink-900">
@@ -42,6 +61,32 @@ export function Moodboard() {
       <div className="flex-1 flex overflow-hidden">
         {/* Sidebar Controls */}
         <div className="w-80 border-r border-white/5 p-6 space-y-6 overflow-y-auto bg-ink-900/50">
+          
+          <div className="space-y-4">
+             <div className="flex items-center gap-2 text-accent">
+               <Dna size={14} />
+               <h3 className="text-[10px] mono font-bold uppercase tracking-wider">Cinematic DNA Mashup</h3>
+             </div>
+             <div className="space-y-2">
+                <input 
+                  value={mashupInput}
+                  onChange={(e) => setMashupInput(e.target.value)}
+                  className="nle-input text-[11px]"
+                  placeholder="e.g. Blade Runner + Sin City"
+                />
+                <button 
+                  onClick={handleMashup}
+                  disabled={isMashing || !mashupInput}
+                  className="w-full nle-button py-2 flex items-center justify-center gap-2 hover:border-accent hover:text-accent transition-all"
+                >
+                  {isMashing ? <Loader2 size={12} className="animate-spin" /> : <Wand2 size={12} />}
+                  MASHUP STYLES
+                </button>
+             </div>
+          </div>
+
+          <div className="h-[1px] bg-white/5" />
+
           <div className="space-y-2">
             <label className="text-[9px] mono uppercase font-bold text-zinc-500 tracking-wider">Mood Prompt</label>
             <textarea 

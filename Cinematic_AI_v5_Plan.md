@@ -45,29 +45,33 @@ A high-end, NLE-style web application for professional AI filmmaking. It bridges
 
 ## 3. Implementation Plan
 
-### Phase 1: Foundation & Unified Store
+### Phase 1: Foundation & Unified Store [COMPLETED]
 - Merge `store.ts` from prototypes.
 - Implement the `Character` -> `Outfit` relationship.
 - Setup the basic NLE layout (SideNav, Main Canvas, Right Inspector).
 
-### Phase 2: The Character Forge & Library
+### Phase 2: The Character Forge & Library [COMPLETED]
 - Build the "Character Forge" for creating Master identities and Outfit variants.
 - Implement the "Location Scout" and "Prop Room".
+- **Added**: "Concept Engine" (Moodboard).
 
-### Phase 3: The Sequencer & Smart Input
+### Phase 3: The Sequencer & Smart Input [COMPLETED]
 - Implement the Timeline with drag-and-drop (`@hello-pangea/dnd`).
 - Integrate the `MentionTextarea` for shot-level prompting.
 - Build the "Orchestrator" utility for prompt construction.
+- **Added**: "Auto-Storyboard" (Script Breakdown).
 
-### Phase 4: AI Integration & Continuity
-- Implement the BYOK Settings panel.
+### Phase 4: AI Integration & Continuity [IN PROGRESS]
+- Implement the BYOK Settings panel. [COMPLETED]
 - Build the "Generation Task Queue".
 - Add "Frame Chaining" logic (Approved Take -> Init Image).
+- **Added**: ".OTIO" Professional Export. [COMPLETED]
 
-### Phase 5: Polish & Advanced Features
-- Add "Coverage Autocomplete" (suggesting OTS, CU, Wide shots).
+### Phase 5: Polish & Advanced Features [IN PROGRESS]
+- Add "Coverage Autocomplete" (suggesting OTS, CU, Wide shots). [COMPLETED]
 - Add "Cinematic DNA" mashup tool.
-- Visual polish (NLE-styled UI components).
+- Visual polish (NLE-styled UI components). [COMPLETED]
+- **Added**: NLE Keyboard Shortcuts (J/K/L). [COMPLETED]
 
 ---
 

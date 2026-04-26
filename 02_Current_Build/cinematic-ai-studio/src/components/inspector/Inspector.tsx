@@ -3,6 +3,7 @@ import { useStore } from "../../store";
 import { Shot, Character, Location, ShotSettings } from "../../types";
 import MentionTextarea from "../shared/MentionTextarea";
 import { GenerationAPI } from "../../utils/api";
+import { generateSmartCoverage } from "../../services/ai";
 import { 
   CheckCircle2, 
   Clock, 
@@ -14,7 +15,8 @@ import {
   User,
   Settings2,
   Maximize2,
-  Play
+  Play,
+  Loader2
 } from "lucide-react";
 
 export function Inspector() {
@@ -23,6 +25,7 @@ export function Inspector() {
   const shot = selectedShotId ? shots[selectedShotId] : null;
 
   const [isRendering, setIsRendering] = useState(false);
+  const [isSuggesting, setIsSuggesting] = useState(false);
 
   if (!shot) {
     return (
@@ -50,6 +53,34 @@ export function Inspector() {
       (takeId, updates) => updateTake(shot.id, takeId, updates)
     );
     setIsRendering(false);
+  };
+
+  const handleSmartCoverage = async () => {
+    if (!state.apiKeys.google) {
+      alert("Configure Google AI Key for coverage suggestions.");
+      return;
+    }
+    setIsSuggesting(true);
+    try {
+      const charNames = shot.characterIds.map(id => characters.find(c => c.id === id)?.displayName || "Unknown");
+      const suggestions = await generateSmartCoverage(state.apiKeys.google, shot.rawPrompt, charNames);
+      
+      suggestions.forEach(s => {
+        addShot(shot.sceneId, {
+          title: s.title,
+          characterIds: shot.characterIds,
+          outfitIds: shot.outfitIds,
+          locationId: shot.locationId,
+          rawPrompt: s.prompt,
+          optics: s.optics,
+          motion: s.motion,
+        });
+      });
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsSuggesting(false);
+    }
   };
 
   return (
@@ -165,6 +196,40 @@ export function Inspector() {
                 className="w-full accent-accent"
               />
             </div>
+          </div>
+        </section>
+
+        {/* Entity Bindings */}
+        <section className="space-y-3 pt-2">
+          <div className="flex items-center justify-between border-b border-line pb-1">
+            <h3 className="text-[9px] mono uppercase tracking-widest text-zinc-600 font-bold">Context Bindings</h3>
+            <button
+              onClick={handleSmartCoverage}
+              disabled={isSuggesting}
+              className="text-[9px] flex items-center gap-1 px-1.5 py-0.5 rounded border border-accent/30 text-accent hover:bg-accent/10 transition-colors mono disabled:opacity-50"
+            >
+              {isSuggesting ? <Loader2 size={10} className="animate-spin" /> : <Sparkles size={10} />}
+              SMART COVERAGE
+            </button>
+          </div>
+          
+          <div className="space-y-2">
+             <div className="flex items-center gap-2 text-[10px] text-zinc-400">
+               <MapPin size={12} className="text-lime-500" />
+               <span>Location:</span>
+               <span className="text-white">{shot.locationId ? locations.find(l => l.id === shot.locationId)?.name : 'None Linked'}</span>
+             </div>
+             {shot.characterIds.map(cid => {
+               const char = characters.find(c => c.id === cid);
+               if (!char) return null;
+               return (
+                 <div key={cid} className="flex items-center gap-2 text-[10px] text-zinc-400">
+                   <User size={12} className="text-cyan-500" />
+                   <span>{char.displayName}:</span>
+                   <span className="text-white">{shot.outfitIds[cid] ? char.outfits.find(o => o.id === shot.outfitIds[cid])?.name : 'Default'}</span>
+                 </div>
+               );
+             })}
           </div>
         </section>
 

@@ -197,4 +197,54 @@ export class GenerationAPI {
       onTakeUpdated(take.id, { status: "failed" });
     }
   }
+
+  static async inpaintTake(
+    take: Take,
+    maskBase64: string,
+    prompt: string,
+    state: CinematicState,
+    onTakeUpdated: (takeId: string, updates: Partial<Take>) => void
+  ) {
+    const apiKey = state.apiKeys.siliconFlow;
+    onTakeUpdated(take.id, { status: "rendering" });
+
+    if (!apiKey) {
+      console.log("Simulating Inpaint for take", take.id);
+      setTimeout(() => {
+        onTakeUpdated(take.id, {
+          status: "rendered",
+          fullImageUrl: `https://picsum.photos/seed/${Math.random()}/1024/576` 
+        });
+      }, 4000);
+      return;
+    }
+
+    try {
+      const response = await fetch(`${SILICON_FLOW_URL}/images/inpainting`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+          model: "black-forest-labs/FLUX.1-schnell", 
+          image_url: take.fullImageUrl,
+          mask_url: maskBase64,
+          prompt: prompt,
+        })
+      });
+
+      if (!response.ok) throw new Error(`API Error: ${response.statusText}`);
+      
+      const data = await response.json();
+      if (data.images && data.images[0]) {
+        onTakeUpdated(take.id, { status: "rendered", fullImageUrl: data.images[0].url });
+      } else {
+        throw new Error("No image returned");
+      }
+    } catch (err) {
+      console.error(err);
+      onTakeUpdated(take.id, { status: "failed" });
+    }
+  }
 }
