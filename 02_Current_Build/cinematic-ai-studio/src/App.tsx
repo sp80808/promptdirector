@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useStore } from './store';
 import { 
   Clapperboard, 
@@ -22,6 +22,7 @@ import { ExportModal } from './components/modals/ExportModal';
 import { MediaViewer } from './components/modals/MediaViewer';
 import { VideoPlayer } from './components/modals/VideoPlayer';
 import { Moodboard } from './components/views/Moodboard';
+import { initializeDefaultAgents } from './utils/agents/registry';
 import { RenderQueue } from './components/layout/RenderQueue';
 
 type View = 'project' | 'characters' | 'concepts' | 'locations' | 'props';
@@ -29,6 +30,11 @@ type View = 'project' | 'characters' | 'concepts' | 'locations' | 'props';
 export default function App() {
   const { modal, setModal, apiKeys, setApiKey } = useStore();
   const [currentView, setCurrentView] = useState<View>('project');
+
+  // Initialize agents on mount
+  useEffect(() => {
+    initializeDefaultAgents();
+  }, []);
 
   React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {

@@ -1,9 +1,10 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useStore } from "../../store";
 import { Shot, Character, Location, ShotSettings } from "../../types";
 import MentionTextarea from "../shared/MentionTextarea";
 import { GenerationAPI } from "../../utils/api";
 import { generateSmartCoverage } from "../../services/ai";
+import { runAutomationForShot } from "../../utils/automation/engine";
 import { ContinuityPanel } from "./ContinuityPanel";
 import { 
   CheckCircle2, 
@@ -19,15 +20,60 @@ import {
   Play,
   Loader2,
   Timer,
-  Link2
+  Link2,
+  Wand2,
+  Volume2,
+  Music,
+  Waves
 } from "lucide-react";
 
 export function Inspector() {
   const state = useStore();
-  const { shots, selectedShotId, characters, locations, updateShot, addShot, addTake, updateTake, approveTake, setModal } = state;
+  const { shots, selectedShotId, characters, locations, updateShot, addShot, addTake, updateTake, approveTake, setModal, automationSuggestions, applySuggestion, dismissSuggestion } = state;
   const shot = selectedShotId ? shots[selectedShotId] : null;
 
   const [isRendering, setIsRendering] = useState(false);
+  const [renderProgress, setRenderProgress] = useState<number | null>(null);
+  const [renderStatus, setRenderStatus] = useState<"idle" | "queued" | "rendering" | "completed" | "failed">("idle");
+  
+  // Automation state
+  const [isEnhancing, setIsEnhancing] = useState(false);
+  
+  // Automation states
+  const [isEnhancing, setIsEnhancing] = useState(false);
+  
+  // Get relevant suggestions for current shot
+  const suggestions = selectedShotId 
+    ? automationSuggestions.filter(s => s.shotId === selectedShotId && !s.applied && !s.dismissed)
+    : [];
+  const promptSuggestion = suggestions.find(s => s.type === 'prompt_enhancement');
+
+  // Subscribe to take status changes for the current shot
+  React.useEffect(() => {
+    if (!shot) return;
+    
+    // Check if any take is currently rendering
+    const renderingTake = shot.takes.find(t => t.status === "rendering");
+    const failedTake = shot.takes.find(t => t.status === "failed");
+    const completedTake = shot.takes.find(t => t.status === "rendered");
+    
+    if (renderingTake) {
+      setIsRendering(true);
+      setRenderStatus("rendering");
+      setRenderProgress(renderingTake.progress || 0);
+    } else if (failedTake) {
+      setIsRendering(false);
+      setRenderStatus("failed");
+      setRenderProgress(null);
+    } else if (completedTake && !isRendering) {
+      setRenderStatus("completed");
+      setRenderProgress(null);
+    } else {
+      setIsRendering(false);
+      setRenderStatus("idle");
+      setRenderProgress(null);
+    }
+  }, [shot?.takes]);
   const [isSuggesting, setIsSuggesting] = useState(false);
 
   if (!shot) {
@@ -56,6 +102,10 @@ export function Inspector() {
       (takeId, updates) => updateTake(shot.id, takeId, updates)
     );
     setIsRendering(false);
+  };
+
+  const handleGenerateAudio = async (takeId: string) => {
+    await GenerationAPI.renderAudio(shot!, takeId, state, (tid, updates) => updateTake(shot!.id, tid, updates));
   };
 
   const handleSmartCoverage = async () => {
@@ -110,6 +160,23 @@ export function Inspector() {
             <label className="text-[9px] mono uppercase text-zinc-500 font-bold flex items-center gap-1">
               <Sparkles size={10} className="text-accent" /> Smart Prompt
             </label>
+            <button
+              onClick={async () => {
+                if (!selectedShotId) return;
+                setIsEnhancing(true);
+                try {
+                  await runAutomationForShot(selectedShotId);
+                } finally {
+                  setIsEnhancing(false);
+                }
+              }}
+              disabled={isEnhancing || !state.apiKeys.google}
+              className="text-[9px] mono text-accent hover:underline flex items-center gap-1 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+              title={state.apiKeys.google ? "AI-enhance this prompt" : "Configure Google AI key to enable"}
+            >
+              {isEnhancing ? <Loader2 size={10} className="animate-spin" /> : <Wand2 size={10} />}
+              {isEnhancing ? 'ENHANCING...' : 'ENHANCE'}
+            </button>
           </div>
           <MentionTextarea 
             value={shot.rawPrompt}
@@ -117,6 +184,45 @@ export function Inspector() {
             placeholder="Type @ to mention characters, outfits or locations..."
             rows={4}
           />
+          
+          {/* Automation Suggestion UI */}
+          {promptSuggestion && (
+            <div className="mt-2 p-3 bg-accent/5 border border-accent/20 rounded-lg animate-in fade-in slide-in-from-top-2">
+              <div className="flex items-start gap-2">
+                <div className="w-6 h-6 rounded-full bg-accent/20 flex items-center justify-center shrink-0 mt-0.5">
+                  <Sparkles size={12} className="text-accent" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-[10px] font-bold text-accent">AI Suggestion</span>
+                    <span className="text-[8px] mono text-zinc-500">
+                      {Math.round(promptSuggestion.confidence * 100)}% confident
+                    </span>
+                  </div>
+                  <p className="text-[10px] text-zinc-300 mb-2 line-clamp-2">
+                    {promptSuggestion.reason}
+                  </p>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => {
+                        handleUpdate({ rawPrompt: promptSuggestion.suggested });
+                        applySuggestion(promptSuggestion.id);
+                      }}
+                      className="text-[9px] px-2 py-1 bg-accent text-black font-bold rounded hover:bg-accent/90 transition-colors"
+                    >
+                      Accept
+                    </button>
+                    <button
+                      onClick={() => dismissSuggestion(promptSuggestion.id)}
+                      className="text-[9px] px-2 py-1 bg-ink-800 text-zinc-400 border border-line rounded hover:bg-white/10"
+                    >
+                      Dismiss
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </section>
 
         {/* Optics & Motion */}
@@ -170,12 +276,17 @@ export function Inspector() {
                <label className="text-[8px] mono uppercase text-zinc-500 flex items-center gap-1">
                  <Link2 size={8} /> Continuity
                </label>
-               <button 
-                 onClick={() => handleUpdate({ usePreviousFrameAsInit: !shot.usePreviousFrameAsInit })}
-                 className={`w-full py-1 border rounded text-[8px] mono uppercase transition-all ${shot.usePreviousFrameAsInit ? 'bg-accent/10 border-accent text-accent' : 'bg-ink-800 border-line text-zinc-600'}`}
-               >
-                 {shot.usePreviousFrameAsInit ? 'CHAIN: ON' : 'CHAIN: OFF'}
-               </button>
+                <button 
+                  onClick={() => handleUpdate({ usePreviousFrameAsInit: !shot.usePreviousFrameAsInit })}
+                  className={`w-full py-1 border rounded text-[8px] mono uppercase transition-all flex items-center justify-between gap-2 ${
+                    shot.usePreviousFrameAsInit 
+                      ? 'bg-accent/10 border-accent text-accent' 
+                      : 'bg-ink-800 border-line text-zinc-600 hover:border-zinc-500'
+                  }`}
+                >
+                  <span>{shot.usePreviousFrameAsInit ? 'CHAIN: ON' : 'CHAIN: OFF'}</span>
+                  {shot.usePreviousFrameAsInit && <Link2 size={10} />}
+                </button>
              </div>
           </div>
           
@@ -228,6 +339,34 @@ export function Inspector() {
                 className="w-full accent-accent"
               />
             </div>
+          </div>
+        </section>
+
+        {/* Audio Stage */}
+        <section className="space-y-3 pt-2">
+          <h3 className="text-[9px] mono uppercase tracking-widest text-zinc-600 font-bold border-b border-line pb-1 flex items-center gap-1.5">
+            <Volume2 size={10} /> Audio Stage
+          </h3>
+          <div className="space-y-3">
+             <div className="space-y-1">
+               <label className="text-[8px] mono uppercase text-zinc-500 flex items-center gap-1">
+                 <Waves size={8} /> Ambient / Foley Prompt
+               </label>
+               <textarea 
+                 value={shot.ambientSoundPrompt || ""}
+                 onChange={(e) => handleUpdate({ ambientSoundPrompt: e.target.value })}
+                 className="nle-input text-[10px] h-12 resize-none"
+                 placeholder="e.g. Heavy rain on tin roof, distant thunder..."
+               />
+             </div>
+             {shot.approvedTakeId && (
+               <button 
+                 onClick={() => handleGenerateAudio(shot.approvedTakeId!)}
+                 className="w-full nle-button py-1.5 bg-ink-800 text-[9px] mono border-accent/20 text-accent hover:bg-accent/10 transition-all flex items-center justify-center gap-2"
+               >
+                 <Sparkles size={10} /> GENERATE FOLEY FOR APPROVED TAKE
+               </button>
+             )}
           </div>
         </section>
 
@@ -330,14 +469,73 @@ export function Inspector() {
         </section>
       </div>
 
-      <div className="p-4 border-t border-line bg-ink-850 shrink-0">
+      <div className="p-4 border-t border-line bg-ink-850 shrink-0 space-y-3">
+        {/* Generation Status Display */}
+        {isRendering && (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between text-[10px] mono">
+              <span className="text-accent animate-pulse">GENERATING TAKE...</span>
+              <span className="text-zinc-400">{renderProgress || 0}%</span>
+            </div>
+            <div className="h-1.5 bg-ink-950 rounded-full overflow-hidden border border-line">
+              <div 
+                className="h-full bg-gradient-to-r from-accent to-accent/60 transition-all duration-300"
+                style={{ width: `${renderProgress || 0}%` }}
+              />
+            </div>
+          </div>
+        )}
+
+        {renderStatus === "failed" && (
+          <div className="p-3 bg-red-900/20 border border-red-500/30 rounded text-xs text-red-400">
+            ✕ Generation failed. Check API key and try again.
+          </div>
+        )}
+
+        {renderStatus === "completed" && (
+          <div className="p-2 bg-lime-900/20 border border-lime-500/30 rounded text-xs text-lime-400 flex items-center gap-2">
+            <CheckCircle2 size={12} /> Take rendered successfully
+          </div>
+        )}
+
+        {/* Main Render Button */}
         <button 
           onClick={handleRender}
           disabled={isRendering}
-          className="w-full bg-accent text-black font-bold py-2 rounded text-xs hover:bg-accent/90 transition-all active:scale-[0.98] shadow-[0_0_15px_rgba(255,107,61,0.2)] disabled:opacity-50 disabled:shadow-none"
+          className={`w-full font-bold py-2.5 rounded text-xs uppercase tracking-widest flex items-center justify-center gap-2 transition-all active:scale-[0.98] ${
+            isRendering
+              ? 'bg-ink-800 text-zinc-500 border border-line cursor-not-allowed'
+              : 'bg-accent text-black hover:bg-accent/90 shadow-[0_0_15px_rgba(255,107,61,0.2)] border border-accent/50'
+          }`}
         >
-          {isRendering ? 'GENERATING...' : 'RENDER SELECTED SHOT'}
+          {isRendering ? (
+            <>
+              <Loader2 size={14} className="animate-spin" />
+              RENDERING...
+            </>
+          ) : (
+            <>
+              <Sparkles size={14} />
+              RENDER SELECTED SHOT
+            </>
+          )}
         </button>
+
+        {!isRendering && renderStatus === "failed" && (
+          <button 
+            onClick={() => {
+              // Clear failed takes and retry
+              shot.takes.forEach(t => {
+                if (t.status === "failed") {
+                  updateTake(shot.id, t.id, { status: "queued" as const, error: undefined });
+                }
+              });
+            }}
+            className="w-full text-[10px] mono text-zinc-500 hover:text-accent underline"
+          >
+            Retry failed takes
+          </button>
+        )}
       </div>
     </div>
   );

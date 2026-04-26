@@ -1,15 +1,23 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { CinematicState, Shot, Take, Scene } from "../types";
+import { CinematicState, Shot, Take, Scene, AutomationSuggestion, AutomationConfig } from "../types";
 
 /* eCoT: 
    Unified State Engine for Cinematic.AI v5.0
    1. Library: Characters (Master/Outfits), Locations, Props.
    2. Sequence: Scenes -> Shots -> Takes.
    3. AI Orchestration: API Keys and Task Tracking.
-*/
+   4. Automation: Agent suggestions + user preferences.
+ */
 
 const uid = () => Math.random().toString(36).slice(2, 11);
+
+const defaultAutomationConfig: AutomationConfig = {
+  promptEnhancer: { enabled: true, level: "moderate" },
+  autoApproval: { enabled: false, minScore: 8.5 },
+  continuityCheck: { enabled: true, severityThreshold: "warning" },
+  shotSuggester: { enabled: true },
+};
 
 export const useStore = create<CinematicState>()(
   persist(
@@ -27,8 +35,36 @@ export const useStore = create<CinematicState>()(
       modal: null,
       setModal: (m) => set({ modal: m }),
 
-      selectedShotId: null,
-      selectShot: (id) => set({ selectedShotId: id }),
+       selectedShotId: null,
+       selectShot: (id) => set({ selectedShotId: id }),
+
+       // ── Automation State ────────────────────────────────────────────────
+       automationSuggestions: [],
+       automationConfig: defaultAutomationConfig,
+
+      addSuggestion: (s: Omit<AutomationSuggestion, "id" | "createdAt" | "applied" | "dismissed">) => set((state) => ({
+        automationSuggestions: [
+          ...state.automationSuggestions,
+          { ...s, id: uid(), applied: false, dismissed: false, createdAt: Date.now() }
+        ]
+      })),
+      applySuggestion: (id: string) => set((state) => ({
+        automationSuggestions: state.automationSuggestions.map(s =>
+          s.id === id ? { ...s, applied: true } : s
+        )
+      })),
+      dismissSuggestion: (id: string) => set((state) => ({
+        automationSuggestions: state.automationSuggestions.map(s =>
+          s.id === id ? { ...s, dismissed: true } : s
+        )
+      })),
+      clearSuggestionsForShot: (shotId: string) => set((state) => ({
+        automationSuggestions: state.automationSuggestions.filter(s => s.shotId !== shotId)
+      })),
+      updateAutomationConfig: (config: Partial<AutomationConfig>) => set((state) => ({
+        automationConfig: { ...state.automationConfig, ...config }
+      })),
+
 
       addCharacter: (c) => {
         const id = uid();
@@ -277,6 +313,20 @@ export const useStore = create<CinematicState>()(
     }),
     {
       name: "cinematic-v5-storage",
+      partialize: (state) => ({
+        apiKeys: state.apiKeys,
+        characters: state.characters,
+        locations: state.locations,
+        props: state.props,
+        scenes: state.scenes,
+        shots: state.shots,
+        automationConfig: state.automationConfig,
+        // Intentionally NOT persisting: 
+        // - modal (UI state)
+        // - selectedShotId (UI state)
+        // - renderQueue (transient)
+        // - automationSuggestions (transient, regenerated on load)
+      }),
     }
   )
 );

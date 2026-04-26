@@ -1,9 +1,58 @@
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import { useStore } from "../../store";
 import { Loader2, CheckCircle2, AlertCircle, X, Clock, Play } from "lucide-react";
+import { GenerationAPI } from "../../utils/api";
 
 export function RenderQueue() {
-  const { renderQueue, shots, removeFromRenderQueue } = useStore();
+  const state = useStore();
+  const { renderQueue, shots, removeFromRenderQueue, updateRenderQueueItem, addTake, updateTake } = state;
+
+  const isProcessingRef = useRef(false);
+
+  useEffect(() => {
+    const processQueue = async () => {
+      if (isProcessingRef.current) return;
+      
+      const nextItem = renderQueue.find(q => q.status === "pending");
+      if (!nextItem) return;
+
+      isProcessingRef.current = true;
+      updateRenderQueueItem(nextItem.id, { status: "processing", progress: 10 });
+
+      const shot = shots[nextItem.shotId];
+      if (!shot) {
+        updateRenderQueueItem(nextItem.id, { status: "failed", error: "Shot not found" });
+        isProcessingRef.current = false;
+        return;
+      }
+
+      try {
+        await GenerationAPI.renderShot(
+          shot,
+          state,
+          (takeId) => {
+            addTake(shot.id, { id: takeId, shotId: shot.id, seed: 0, status: "rendering", rating: 0, createdAt: Date.now() });
+            updateRenderQueueItem(nextItem.id, { takeId, progress: 50 });
+          },
+          (takeId, updates) => {
+            updateTake(shot.id, takeId, updates);
+            if (updates.status === "rendered") {
+              updateRenderQueueItem(nextItem.id, { status: "completed", progress: 100 });
+            } else if (updates.status === "failed") {
+              updateRenderQueueItem(nextItem.id, { status: "failed", progress: 100 });
+            }
+          }
+        );
+      } catch (e: any) {
+        console.error("Render Queue Error:", e);
+        updateRenderQueueItem(nextItem.id, { status: "failed", error: e.message });
+      } finally {
+        isProcessingRef.current = false;
+      }
+    };
+
+    processQueue();
+  }, [renderQueue, shots, state, updateRenderQueueItem, addTake, updateTake]);
 
   if (renderQueue.length === 0) return null;
 

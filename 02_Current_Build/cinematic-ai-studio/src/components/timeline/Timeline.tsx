@@ -1,11 +1,11 @@
 import { useStore } from "../../store";
 import { Scene, Shot } from "../../types";
 import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
-import { Clapperboard, Plus, Video, Trash2, GripVertical } from "lucide-react";
+import { Clapperboard, Plus, Video, Trash2, GripVertical, PlayCircle } from "lucide-react";
 import { IconSparkle } from "../shared/Icons";
 
 export function Timeline() {
-  const { scenes, shots, moveShot, addShot, addScene, selectShot, selectedShotId } = useStore();
+  const { scenes, shots, moveShot, addShot, addScene, selectShot, selectedShotId, batchAddToRenderQueue } = useStore();
 
   const onDragEnd = (result: DropResult) => {
     const { source, destination, draggableId } = result;
@@ -18,6 +18,19 @@ export function Timeline() {
       source.index,
       destination.index
     );
+  };
+
+  const handleRenderScene = (scene: Scene) => {
+    const unrenderedShots = scene.shotIds.filter(id => {
+      const shot = shots[id];
+      return shot && !shot.approvedTakeId;
+    });
+    
+    if (unrenderedShots.length > 0) {
+      batchAddToRenderQueue(unrenderedShots);
+    } else {
+      alert("All shots in this scene already have an approved take.");
+    }
   };
 
   return (
@@ -52,12 +65,20 @@ export function Timeline() {
                   </div>
                   <h3 className="text-sm font-bold text-white">{scene.title}</h3>
                 </div>
-                <button 
-                  onClick={() => addShot(scene.id, { title: "New Shot" })}
-                  className="nle-button py-1 text-[10px]"
-                >
-                  <Plus size={10} /> ADD SHOT
-                </button>
+                <div className="flex items-center gap-2">
+                  <button 
+                    onClick={() => handleRenderScene(scene)}
+                    className="nle-button py-1 text-[10px] flex items-center gap-1 border-accent/20 text-accent hover:bg-accent/10"
+                  >
+                    <PlayCircle size={10} /> RENDER SCENE
+                  </button>
+                  <button 
+                    onClick={() => addShot(scene.id, { title: "New Shot" })}
+                    className="nle-button py-1 text-[10px] flex items-center gap-1"
+                  >
+                    <Plus size={10} /> ADD SHOT
+                  </button>
+                </div>
               </div>
 
               <Droppable droppableId={scene.id} direction="horizontal">

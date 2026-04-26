@@ -6,11 +6,11 @@ export function VideoPlayer() {
   const { scenes, shots, setModal } = useStore();
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentShotIndex, setCurrentShotIndex] = useState(0);
-  const [progress, setProgress] = useState(0);
+  const [volume, setVolume] = useState(0.7);
   
   // Flatten sequence of approved takes
   const sequence = React.useMemo(() => {
-    const list: { id: string, title: string, mediaUrl: string, isVideo: boolean }[] = [];
+    const list: { id: string, title: string, mediaUrl: string, audioUrl?: string, isVideo: boolean }[] = [];
     scenes.forEach(scene => {
       scene.shotIds.forEach(shotId => {
         const shot = shots[shotId];
@@ -21,6 +21,7 @@ export function VideoPlayer() {
               id: shot.id,
               title: shot.title,
               mediaUrl: take.videoUrl || take.fullImageUrl || take.thumbUrl || "",
+              audioUrl: take.audioUrl,
               isVideo: !!take.videoUrl
             });
           }
@@ -32,7 +33,20 @@ export function VideoPlayer() {
 
   const currentMedia = sequence[currentShotIndex];
   const videoRef = useRef<HTMLVideoElement>(null);
+  const audioRef = useRef<HTMLAudioElement>(null);
   
+  // Audio Sync Effect
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.volume = volume;
+      if (isPlaying) {
+        audioRef.current.play().catch(e => console.error("Audio Play Error:", e));
+      } else {
+        audioRef.current.pause();
+      }
+    }
+  }, [isPlaying, currentShotIndex, volume]);
+
   // Fallback for static images: display them for 3 seconds each
   useEffect(() => {
     let timer: NodeJS.Timeout;
@@ -95,21 +109,26 @@ export function VideoPlayer() {
 
       <div className="flex-1 flex items-center justify-center bg-black relative">
         {currentMedia ? (
-          currentMedia.isVideo ? (
-            <video 
-              ref={videoRef}
-              src={currentMedia.mediaUrl} 
-              autoPlay={isPlaying}
-              onEnded={handleVideoEnded}
-              className="w-full h-full object-contain"
-            />
-          ) : (
-            <img 
-              src={currentMedia.mediaUrl} 
-              alt={currentMedia.title}
-              className="w-full h-full object-contain"
-            />
-          )
+          <>
+            {currentMedia.audioUrl && (
+              <audio key={currentMedia.audioUrl} ref={audioRef} src={currentMedia.audioUrl} loop />
+            )}
+            {currentMedia.isVideo ? (
+              <video 
+                ref={videoRef}
+                src={currentMedia.mediaUrl} 
+                autoPlay={isPlaying}
+                onEnded={handleVideoEnded}
+                className="w-full h-full object-contain"
+              />
+            ) : (
+              <img 
+                src={currentMedia.mediaUrl} 
+                alt={currentMedia.title}
+                className="w-full h-full object-contain"
+              />
+            )}
+          </>
         ) : null}
       </div>
 
@@ -150,7 +169,9 @@ export function VideoPlayer() {
             </div>
 
             <div className="flex items-center gap-4 text-white">
-              <button className="hover:text-accent transition-colors"><Volume2 size={20} /></button>
+              <button className="hover:text-accent transition-colors" onClick={() => setVolume(v => v === 0 ? 0.7 : 0)}>
+                {volume === 0 ? <Volume2 size={20} className="text-zinc-600" /> : <Volume2 size={20} />}
+              </button>
               <button className="hover:text-accent transition-colors"><Maximize size={20} /></button>
             </div>
          </div>

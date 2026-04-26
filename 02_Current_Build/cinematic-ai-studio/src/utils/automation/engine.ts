@@ -1,0 +1,136 @@
+/**
+ * Automation Engine — Orchestrates agent execution and suggestion management
+ * 
+ * This module ties the Agent Registry to the Zustand store, acting as the
+ * bridge between state changes and automated workflows.
+ */
+
+import { useStore } from '@/store';
+import { AgentRegistry } from '@/utils/agents/registry';
+import { AgentContext } from '@/utils/agents/base';
+
+/**
+ * Run all enabled agents for a specific shot.
+ * Creates suggestion records in the store for user review.
+ */
+export async function runAutomationForShot(shotId: string): Promise<number> {
+  const state = useStore.getState();
+  const shot = state.shots[shotId];
+  if (!shot) {
+    console.warn(`[Automation] Shot ${shotId} not found`);
+    return 0;
+  }
+
+  // Build agent context from current store state
+  const context: AgentContext = {
+    shotId,
+    shot,
+    characters: state.characters,
+    locations: state.locations,
+    props: state.props,
+    apiKey: state.apiKeys.google,
+    config: state.automationConfig,
+    store: state,
+  };
+
+  // Execute agents
+  const results = await AgentRegistry.runAll(context);
+
+  // Convert results → store suggestions
+  let added = 0;
+  for (const result of results) {
+    // Dedupe: remove previous suggestion from same agent+shot+type
+    const existingIdx = state.automationSuggestions.findIndex(s =>
+      s.shotId === shotId && 
+      s.agentId === result.agentId && 
+      s.type === result.type &&
+      !s.applied && !s.dismissed
+    );
+    if (existingIdx >= 0) {
+      // Replace old with new
+      state.dismissSuggestion(state.automationSuggestions[existingIdx].id);
+    }
+
+    if (result.confidence >= (state.automationConfig.promptEnhancer.confidenceThreshold ?? 0.6)) {
+      state.addSuggestion({
+        agentId: result.agentId,
+        shotId: result.shotId,
+        type: result.type,
+        original: result.original,
+        suggested: result.suggested,
+        confidence: result.confidence,
+        reason: result.reason,
+      });
+      added++;
+    }
+  }
+
+  if (added > 0) {
+    console.log(`[Automation] Added ${added} suggestion(s) for shot ${shotId.slice(0,6)}`);
+  }
+
+  return added;
+}
+
+/**
+ * Run automation for all shots in a scene (batch mode)
+ */
+export async function runAutomationForScene(sceneId: string): Promise<number> {
+  const state = useStore.getState();
+  const scene = state.scenes.find(s => s.id === sceneId);
+  if (!scene) return 0;
+  
+  let total = 0;
+  for (const shotId of scene.shotIds) {
+    const count = await runAutomationForShot(shotId);
+    total += count;
+  }
+  return total;
+}
+
+/**
+ * Get suggestions for a specific shot, sorted by confidence desc
+ */
+export function getSuggestionsForShot(shotId: string) {
+  const state = useStore.getState();
+  return state.automationSuggestions
+    .filter(s => s.shotId === shotId && !s.applied && !s.dismissed)
+    .sort((a, b) => b.confidence - a.confidence);
+}
+
+/**
+ * Apply top suggestion for a shot (replaces prompt with suggested version)
+ */
+export function applyTopSuggestion(shotId: string): boolean {
+  const state = useStore.getState();
+  const top = state.automationSuggestions
+    .filter(s => s.shotId === shotId && !s.applied && !s.dismissed)
+    .sort((a, b) => b.confidence - a.confidence)[0];
+  
+  if (!top) return false;
+  
+  // Update shot with suggested prompt
+  state.updateShot(shotId, { rawPrompt: top.suggested });
+  state.applySuggestion(top.id);
+  return true;
+}
+
+/**
+ * Auto-apply all high-confidence suggestions for a shot (if user enabled)
+ */
+export function autoApplyHighConfidence(shotId: string, threshold = 0.9): number {
+  const state = useStore.getState();
+  const targets = state.automationSuggestions.filter(s =>
+    s.shotId === shotId &&
+    !s.applied && !s.dismissed &&
+    s.confidence >= threshold &&
+    s.type === 'prompt_enhancement'
+  );
+  
+  for (const s of targets) {
+    state.updateShot(shotId, { rawPrompt: s.suggested });
+    state.applySuggestion(s.id);
+  }
+  
+  return targets.length;
+}

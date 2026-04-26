@@ -398,4 +398,55 @@ export class GenerationAPI {
       onTakeUpdated(take.id, { status: "failed" });
     }
   }
+
+  static async renderAudio(
+    shot: Shot,
+    takeId: string,
+    state: CinematicState,
+    onTakeUpdated: (takeId: string, updates: Partial<Take>) => void
+  ) {
+    const apiKey = state.apiKeys.siliconFlow;
+    const prompt = shot.ambientSoundPrompt || `Cinematic ambient sound for: ${shot.rawPrompt}`;
+    
+    onTakeUpdated(takeId, { status: "rendering" });
+
+    if (!apiKey) {
+      console.log("Simulating Audio generation for", prompt);
+      setTimeout(() => {
+        onTakeUpdated(takeId, {
+          status: "rendered",
+          audioUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3" // Mock audio
+        });
+      }, 3000);
+      return;
+    }
+
+    try {
+      // Using a hypothetical SiliconFlow audio generation endpoint or similar
+      const response = await fetch(`${SILICON_FLOW_URL}/audio/generations`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+          model: "stabilityai/stable-audio-open-1.0",
+          prompt: prompt,
+          duration: shot.duration || 5.0
+        })
+      });
+
+      if (!response.ok) throw new Error(`API Error: ${response.statusText}`);
+      
+      const data = await response.json();
+      if (data.audio_url) {
+        onTakeUpdated(takeId, { status: "rendered", audioUrl: data.audio_url });
+      } else {
+        throw new Error("No audio URL returned");
+      }
+    } catch (err) {
+      console.error(err);
+      onTakeUpdated(takeId, { status: "failed" });
+    }
+  }
 }

@@ -52,6 +52,7 @@ export type Take = {
   id: string;
   shotId: string;
   videoUrl?: string;
+  audioUrl?: string;
   thumbUrl?: string;
   fullImageUrl?: string;
   seed: number;
@@ -87,7 +88,7 @@ export type ContinuityIssue = {
   id: string;
   shotId: string;
   severity: "warning" | "error" | "info";
-  type: "character" | "location" | "lighting" | "prop" | "timing";
+  type: "character" | "location" | "lighting" | "prop" | "timing" | "wardrobe";
   message: string;
   suggestion?: string;
 };
@@ -123,6 +124,8 @@ export type Shot = {
   notes?: string;
   continuityIssues?: ContinuityIssue[];
   locked?: boolean;
+  ambientSoundPrompt?: string;
+  musicBedPrompt?: string;
 };
 
 export type Scene = {
@@ -178,7 +181,7 @@ export interface CinematicState {
   addTake: (shotId: string, t: Omit<Take, "id" | "shotId">) => string;
   updateTake: (shotId: string, takeId: string, p: Partial<Take>) => void;
   approveTake: (shotId: string, takeId: string) => void;
-  addSceneFromScript: (title: string, shots: { title: string, description: string }[]) => void;
+  addSceneFromScript: (title: string, breakdown: any) => void;
   
   // Render Queue
   addToRenderQueue: (shotId: string, priority?: number) => string;
