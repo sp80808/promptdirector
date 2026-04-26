@@ -20,9 +20,9 @@ export function VideoPlayer() {
             list.push({
               id: shot.id,
               title: shot.title,
-              mediaUrl: take.videoUrl || take.fullImageUrl || take.thumbUrl || "",
-              audioUrl: take.audioUrl,
-              isVideo: !!take.videoUrl
+              mediaUrl: take.lipSyncUrl || take.videoUrl || take.fullImageUrl || take.thumbUrl || "",
+              audioUrl: take.speechUrl || take.audioUrl,
+              isVideo: !!(take.lipSyncUrl || take.videoUrl)
             });
           }
         }

@@ -79,11 +79,14 @@ export const AgentRegistry = {
 export function initializeDefaultAgents() {
   AgentRegistry.clear();
   
-  // Register agents in priority order
+  // Import agents
+  const { PromptEnhancerAgent } = require('./PromptEnhancerAgent');
+  const { TakeCuratorAgent } = require('./TakeCuratorAgent');
+  
   AgentRegistry.register(new PromptEnhancerAgent());
+  AgentRegistry.register(new TakeCuratorAgent());
   
   // Future agents will be registered here:
-  // AgentRegistry.register(new TakeCuratorAgent());
   // AgentRegistry.register(new ShotSuggestionAgent());
   // AgentRegistry.register(new ContinuityAgent());
   

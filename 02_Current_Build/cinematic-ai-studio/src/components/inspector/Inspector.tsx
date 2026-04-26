@@ -368,6 +368,60 @@ export function Inspector() {
                </button>
              )}
           </div>
+
+          <div className="h-[1px] bg-white/5 my-4" />
+
+          <div className="space-y-3">
+             <div className="space-y-1">
+               <label className="text-[8px] mono uppercase text-zinc-500 flex items-center gap-1">
+                 <User size={8} /> Character Dialogue
+               </label>
+               <div className="flex gap-2">
+                 <select 
+                   value={shot.speakingCharacterId || ""}
+                   onChange={(e) => handleUpdate({ speakingCharacterId: e.target.value })}
+                   className="nle-input text-[10px] py-1 w-1/3"
+                 >
+                   <option value="">No Speaker</option>
+                   {shot.characterIds.map(cid => (
+                     <option key={cid} value={cid}>{characters.find(c => c.id === cid)?.displayName}</option>
+                   ))}
+                 </select>
+                 <textarea 
+                   value={shot.dialogue || ""}
+                   onChange={(e) => handleUpdate({ dialogue: e.target.value })}
+                   className="nle-input text-[10px] h-12 flex-1 resize-none"
+                   placeholder="Enter dialogue text..."
+                 />
+               </div>
+             </div>
+             {shot.approvedTakeId && shot.dialogue && (
+               <div className="grid grid-cols-2 gap-2">
+                 <button 
+                   onClick={() => {
+                     const char = characters.find(c => c.id === shot.speakingCharacterId);
+                     GenerationAPI.generateSpeech(shot.dialogue!, char?.voiceId || "default", state, (tid, updates) => updateTake(shot.id, tid, updates), shot.approvedTakeId!);
+                   }}
+                   className="nle-button py-1 text-[8px] mono flex items-center justify-center gap-1"
+                 >
+                   <Volume2 size={10} /> GENERATE SPEECH
+                 </button>
+                 <button 
+                   onClick={() => {
+                     const take = shot.takes.find(t => t.id === shot.approvedTakeId);
+                     if (take?.speechUrl) {
+                        GenerationAPI.generateLipSync(take, take.speechUrl, state, (tid, updates) => updateTake(shot.id, tid, updates));
+                     } else {
+                        alert("Generate speech audio first.");
+                     }
+                   }}
+                   className="nle-button py-1 text-[8px] mono border-cyan-400/20 text-cyan-400 hover:bg-cyan-400/10 flex items-center justify-center gap-1"
+                 >
+                   <Sparkles size={10} /> SYNC LIPS
+                 </button>
+               </div>
+             )}
+          </div>
         </section>
 
         {/* Continuity System */}

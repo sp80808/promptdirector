@@ -7,7 +7,8 @@
 
 import { useStore } from '@/store';
 import { AgentRegistry } from '@/utils/agents/registry';
-import { AgentContext } from '@/utils/agents/base';
+import { AgentContext, AgentResult } from '@/utils/agents/base';
+import type { Take } from '@/types';
 
 /**
  * Run all enabled agents for a specific shot.
@@ -36,37 +37,59 @@ export async function runAutomationForShot(shotId: string): Promise<number> {
   // Execute agents
   const results = await AgentRegistry.runAll(context);
 
-  // Convert results → store suggestions
+  // Process results by type
   let added = 0;
   for (const result of results) {
-    // Dedupe: remove previous suggestion from same agent+shot+type
-    const existingIdx = state.automationSuggestions.findIndex(s =>
-      s.shotId === shotId && 
-      s.agentId === result.agentId && 
-      s.type === result.type &&
-      !s.applied && !s.dismissed
-    );
-    if (existingIdx >= 0) {
-      // Replace old with new
-      state.dismissSuggestion(state.automationSuggestions[existingIdx].id);
-    }
-
-    if (result.confidence >= (state.automationConfig.promptEnhancer.confidenceThreshold ?? 0.6)) {
-      state.addSuggestion({
-        agentId: result.agentId,
-        shotId: result.shotId,
-        type: result.type,
-        original: result.original,
-        suggested: result.suggested,
-        confidence: result.confidence,
-        reason: result.reason,
-      });
+    if (result.type === 'take_rating') {
+      // Apply quality score to take metadata directly (no suggestion UI needed)
+      const { takeId, metrics } = result.metadata as { takeId: string; metrics: any };
+      if (takeId && metrics) {
+        const take = shot.takes.find(t => t.id === takeId);
+        if (take) {
+          // Update take with quality score (we need to call store update)
+          state.updateTake(shotId, takeId, { 
+            metadata: { ...take.metadata, qualityScore: metrics.overall }
+          });
+          
+          // Check auto-approval condition
+          const autoApprovalConfig = state.automationConfig.autoApproval;
+          if (autoApprovalConfig?.enabled && metrics.overall >= autoApprovalConfig.minScore) {
+            state.approveTake(shotId, takeId);
+            console.log(`[Automation] Auto-approved take ${takeId.slice(0,6)} (score: ${metrics.overall})`);
+          }
+        }
+      }
       added++;
+    } else {
+      // Standard suggestion (prompt_enhancement, shot_suggestion, etc.)
+      // Dedupe: remove previous suggestion from same agent+shot+type
+      const existingIdx = state.automationSuggestions.findIndex(s =>
+        s.shotId === shotId && 
+        s.agentId === result.agentId && 
+        s.type === result.type &&
+        !s.applied && !s.dismissed
+      );
+      if (existingIdx >= 0) {
+        state.dismissSuggestion(state.automationSuggestions[existingIdx].id);
+      }
+
+      if (result.confidence >= (state.automationConfig.promptEnhancer.confidenceThreshold ?? 0.6)) {
+        state.addSuggestion({
+          agentId: result.agentId!,
+          shotId: result.shotId,
+          type: result.type,
+          original: result.original,
+          suggested: result.suggested,
+          confidence: result.confidence,
+          reason: result.reason,
+        });
+        added++;
+      }
     }
   }
 
   if (added > 0) {
-    console.log(`[Automation] Added ${added} suggestion(s) for shot ${shotId.slice(0,6)}`);
+    console.log(`[Automation] Processed ${added} result(s) for shot ${shotId.slice(0,6)}`);
   }
 
   return added;
