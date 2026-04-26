@@ -234,4 +234,7 @@ export interface CinematicState {
   // Continuity
   addContinuityIssue: (shotId: string, issue: Omit<ContinuityIssue, "id">) => void;
   clearContinuityIssues: (shotId?: string) => void;
+
+  // Project Import/Export
+  importSequence: (data: any) => void;
 }

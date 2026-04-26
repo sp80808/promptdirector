@@ -1,4 +1,5 @@
 import { useStore } from "@/store";
+import type { AutomationConfig } from "@/types";
 import { 
   Settings, 
   Sparkles, 
@@ -237,19 +238,19 @@ export function AutomationSettingsModal() {
         </div>
 
         <div className="p-4 border-t border-white/5 bg-white/5 flex justify-between">
-          <button
-            onClick={() => {
-              // Reset to defaults
-              updateAutomationConfig({
-                promptEnhancer: { enabled: true, level: "moderate" },
-                autoApproval: { enabled: false, minScore: 8.5 },
-                continuityCheck: { enabled: true, severityThreshold: "warning" },
-                shotSuggester: { enabled: true },
-                takeCurator: { enabled: true, minAutoScore: 8.5 }
-              });
-            }}
-            className="text-[9px] text-zinc-500 hover:text-white underline"
-          >
+            <button
+              onClick={() => {
+                // Reset to defaults
+                updateAutomationConfig({
+                  promptEnhancer: { enabled: true, level: "moderate" },
+                  autoApproval: { enabled: false, minScore: 8.5 },
+                  continuityCheck: { enabled: true, severityThreshold: "warning" },
+                  shotSuggester: { enabled: true },
+                  takeCurator: { enabled: true }
+                });
+              }}
+              className="text-[9px] text-zinc-500 hover:text-white underline"
+            >
             Reset Defaults
           </button>
           <button
